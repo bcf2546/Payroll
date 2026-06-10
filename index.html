@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบเงินเดือน - ฟาร์มไก่ดำ</title>
+<link rel="stylesheet" href="css/app.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a5276">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" style="position:fixed; inset:0; background:linear-gradient(135deg, #2c5f8d 0%, #1a5276 100%); display:flex; align-items:center; justify-content:center; z-index:9999;">
+  <div style="background:white; padding:40px 44px; border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,0.3); width:100%; max-width:400px; text-align:center;">
+    <img id="loginLogo" alt="Logo" style="width:90px; height:90px; margin:0 auto 14px; display:block;">
+    <h2 style="color:#1a5276; margin-bottom:4px; font-size:22px;">ระบบเงินเดือนพนักงาน</h2>
+    <p style="color:#7f8c8d; font-size:13px; margin-bottom:26px;">บริษัท ฟาร์มไก่ดำ (กาญจนบุรี) จำกัด</p>
+    
+    <div style="text-align:left; margin-bottom:16px;">
+      <label style="display:block; font-weight:600; color:#34495e; margin-bottom:6px; font-size:14px;">👤 ID</label>
+      <input type="text" id="loginId" autocomplete="username" 
+             style="width:100%; padding:11px 14px; border:1.5px solid #bdc3c7; border-radius:6px; font-size:15px; transition:border-color 0.2s;"
+             onfocus="this.style.borderColor='#2c5f8d'" onblur="this.style.borderColor='#bdc3c7'"
+             onkeydown="if(event.key==='Enter') document.getElementById('loginPs').focus()">
+    </div>
+    
+    <div style="text-align:left; margin-bottom:20px;">
+      <label style="display:block; font-weight:600; color:#34495e; margin-bottom:6px; font-size:14px;">🔑 Password</label>
+      <input type="password" id="loginPs" autocomplete="current-password"
+             style="width:100%; padding:11px 14px; border:1.5px solid #bdc3c7; border-radius:6px; font-size:15px; transition:border-color 0.2s;"
+             onfocus="this.style.borderColor='#2c5f8d'" onblur="this.style.borderColor='#bdc3c7'"
+             onkeydown="if(event.key==='Enter') attemptLogin()">
+    </div>
+    
+    <div id="loginError" style="display:none; background:#fee; color:#c0392b; padding:10px 14px; border-radius:6px; margin-bottom:14px; font-size:13px; text-align:left;"></div>
+    
+    <button onclick="attemptLogin()" 
+            style="width:100%; padding:12px; background:linear-gradient(135deg, #2c5f8d 0%, #1a5276 100%); color:white; border:none; border-radius:6px; font-size:15px; font-weight:600; cursor:pointer; transition:transform 0.1s;"
+            onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">
+      🔓 เข้าสู่ระบบ
+    </button>
+    
+    <p style="margin-top:20px; font-size:11px; color:#95a5a6;">
+      Session หมดอายุอัตโนมัติหลังไม่มีการใช้งาน 15 นาที
+    </p>
+  </div>
+</div>
+
+<div id="appHeader" class="app-header" style="display:none;">
+  <img class="logo" id="headerLogo" alt="Logo">
+  <div class="title">
+    <h1>💼 ระบบเงินเดือนพนักงาน</h1>
+    <p>บริษัท ฟาร์มไก่ดำ (กาญจนบุรี) จำกัด</p>
+  </div>
+  <div class="sync-status" style="display:flex; align-items:center; gap:10px;">
+    <span class="sync-dot" id="syncDot"></span>
+    <span id="syncText">พร้อมใช้งาน</span>
+    <button onclick="logout()" style="margin-left:12px; background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.4); padding:6px 12px; border-radius:4px; cursor:pointer; font-size:13px;">🚪 ออกจากระบบ</button>
+  </div>
+</div>
+
+<!-- SETUP SCREEN -->
+<div id="setupScreen" class="setup-screen" style="display:none;">
+  <h2>🔧 ตั้งค่าเริ่มต้น</h2>
+  <p style="margin-bottom:14px;">กรุณาใส่ <strong>Google Apps Script Web App URL</strong> เพื่อเชื่อมต่อฐานข้อมูล</p>
+  <p style="color:#666; font-size:13px; margin-bottom:14px;">
+    URL จะหน้าตาประมาณ: <code>https://script.google.com/macros/s/AKfycb.../exec</code>
+  </p>
+  <input type="text" class="url-input" id="setupUrl" placeholder="https://script.google.com/macros/s/...">
+  <div style="display:flex; gap:10px; margin-top:10px;">
+    <button class="btn-primary" onclick="saveSetup()" style="flex:1; padding:12px;">✅ บันทึกและเริ่มใช้งาน</button>
+    <button class="btn-secondary" onclick="skipSetup()" style="padding:12px;">🔒 ใช้แบบออฟไลน์</button>
+  </div>
+  <p style="margin-top:16px; font-size:13px; color:#666;">
+    💡 <strong>ยังไม่ได้สร้าง Web App?</strong> ดูคู่มือใน README.md ที่ส่งไปด้วยกัน
+  </p>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp" class="container" style="display:none;">
+  <div class="tabs">
+    <button class="tab active" data-tab="dashboard">📊 หน้าหลัก</button>
+    <button class="tab" data-tab="employees">👥 พนักงาน</button>
+    <button class="tab" data-tab="quickentry">📝 กรอกรายเดือน</button>
+    <button class="tab" data-tab="salary">💰 บันทึกเงินเดือน</button>
+    <button class="tab" data-tab="summary">📋 ตารางสรุป</button>
+    <button class="tab" data-tab="print">🖨️ พิมพ์เอกสาร</button>
+    <button class="tab" data-tab="settings">⚙️ ตั้งค่า</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="panel active" id="panel-dashboard">
+    <h2 style="margin-bottom: 18px;">ภาพรวมระบบ</h2>
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="label">พนักงานที่ทำงานอยู่</div>
+        <div class="value" id="stat-total">-</div>
+      </div>
+      <div class="stat-card" style="border-left-color:#27ae60;">
+        <div class="label">BCF ไทย (ทำงาน)</div>
+        <div class="value" id="stat-thai" style="color:#27ae60;">-</div>
+      </div>
+      <div class="stat-card" style="border-left-color:#e67e22;">
+        <div class="label">BCF พม่า (ทำงาน)</div>
+        <div class="value" id="stat-myanmar" style="color:#e67e22;">-</div>
+      </div>
+      <div class="stat-card" style="border-left-color:#8e44ad;">
+        <div class="label">กลุ่มอื่นๆ (ทำงาน)</div>
+        <div class="value" id="stat-others" style="color:#8e44ad;">-</div>
+      </div>
+    </div>
+    
+    <!-- ALERTS / NOTIFICATIONS -->
+    <div id="dashAlerts" style="margin-bottom:18px;"></div>
+    
+    <!-- DASHBOARD GRID -->
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:18px;">
+      <!-- Monthly Cost Chart -->
+      <div style="background:white; padding:18px; border-radius:8px; border:1px solid #e9ecef; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 style="margin:0; color:#1a5276; font-size:16px;">📊 ต้นทุนเงินเดือนรายเดือน</h3>
+          <select id="dashChartYear" onchange="renderDashboardCharts()" style="padding:4px 8px; border:1px solid #ccc; border-radius:4px; font-size:13px;"></select>
+        </div>
+        <div id="dashMonthlyChart" style="height:220px; position:relative;"></div>
+      </div>
+      
+      <!-- Completion Calendar -->
+      <div style="background:white; padding:18px; border-radius:8px; border:1px solid #e9ecef; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 style="margin:0; color:#1a5276; font-size:16px;">📅 สถานะการกรอก 12 เดือน</h3>
+          <select id="dashCalGroup" onchange="renderDashboardCharts()" style="padding:4px 8px; border:1px solid #ccc; border-radius:4px; font-size:13px;">
+            <option value="all">ทุกกลุ่ม</option>
+            <option value="BCF ไทย">BCF ไทย</option>
+            <option value="BCF พม่า">BCF พม่า</option>
+            <option value="ฟาร์ม1">ฟาร์ม1</option>
+            <option value="ฟาร์ม3">ฟาร์ม3</option>
+            <option value="SNP">SNP</option>
+          </select>
+        </div>
+        <div id="dashCalendar"></div>
+      </div>
+    </div>
+    
+    <!-- TOP COSTS + GROUP BREAKDOWN -->
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:18px;">
+      <div style="background:white; padding:18px; border-radius:8px; border:1px solid #e9ecef; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+        <h3 style="margin:0 0 12px; color:#1a5276; font-size:16px;">💰 สัดส่วนต้นทุนแต่ละกลุ่ม (เดือนล่าสุด)</h3>
+        <div id="dashGroupBreakdown" style="height:220px;"></div>
+      </div>
+      <div style="background:white; padding:18px; border-radius:8px; border:1px solid #e9ecef; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+        <h3 style="margin:0 0 12px; color:#1a5276; font-size:16px;">🏆 Top 5 เงินเดือนสูงสุด (เดือนล่าสุด)</h3>
+        <div id="dashTopEarners"></div>
+      </div>
+    </div>
+    
+    <div class="info-box">
+      <h3>📖 วิธีใช้งาน</h3>
+      <ol>
+        <li><strong>เริ่มต้น:</strong> ไปที่แท็บ "ตั้งค่า" คลิก "นำเข้าข้อมูลตัวอย่าง" (ครั้งแรกเท่านั้น)</li>
+        <li><strong>จัดการพนักงาน:</strong> เพิ่ม/แก้ไข/ลบ ในแท็บ "พนักงาน"</li>
+        <li><strong>บันทึกเงินเดือน:</strong> ใช้แท็บ "📝 กรอกรายเดือน" (ทุกคนหน้าเดียว) หรือ "💰 บันทึกเงินเดือน" (1 คน 12 เดือน)</li>
+        <li><strong>พิมพ์:</strong> ใบสำคัญจ่ายรายปี (1 คน/A4 แนวนอน) หรือสลิป (4 สลิป/A4)</li>
+        <li><strong>Shortcuts:</strong> กด <kbd style="background:#f0f4f8; padding:2px 8px; border:1px solid #ccc; border-radius:3px; font-family:monospace;">?</kbd> เพื่อดูปุ่มลัดทั้งหมด</li>
+      </ol>
+    </div>
+
+    <div class="success-box">
+      <h3>🔄 การ Sync อัตโนมัติ</h3>
+      <p>ข้อมูลจะ sync กับ Google Sheets อัตโนมัติ:</p>
+      <ul style="margin-left: 20px; margin-top: 8px; line-height: 1.8;">
+        <li>🔼 <strong>Push</strong>: เมื่อมีการแก้ไข (Debounce 800ms)</li>
+        <li>🔽 <strong>Pull</strong>: ทุก 30 วินาที (เพื่อรับการแก้ไขจากเครื่องอื่น)</li>
+        <li>💾 <strong>Offline</strong>: เก็บใน localStorage เมื่อไม่มีเน็ต</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- EMPLOYEES -->
+  <div class="panel" id="panel-employees">
+    <div class="toolbar">
+      <select id="empGroupFilter">
+        <option value="">ทุกกลุ่ม</option>
+        <option value="BCF ไทย">BCF ไทย</option>
+        <option value="BCF พม่า">BCF พม่า</option>
+        <option value="ฟาร์ม1">ฟาร์ม1</option>
+        <option value="ฟาร์ม3">ฟาร์ม3</option>
+        <option value="SNP">SNP</option>
+      </select>
+      <input type="text" id="empSearch" placeholder="🔍 ค้นหา รหัส/ชื่อ...">
+      <button class="btn-success" onclick="openEmpModal()">➕ เพิ่มพนักงาน</button>
+    </div>
+    <div class="table-wrap">
+      <table id="empTable">
+        <thead>
+          <tr>
+            <th>รหัส</th><th>ชื่อ</th><th>นามสกุล</th><th>Name (EN)</th>
+            <th>ตำแหน่ง</th><th>เลขบัตรประชาชน</th><th>วันเริ่มงาน</th>
+            <th>กลุ่ม</th><th>PVD ลจ.%</th><th>PVD นจ.%</th><th>สถานะ</th><th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="empTbody"><tr><td colspan="12" class="loading">กำลังโหลด...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- QUICK ENTRY (กรอกรายเดือน - ทุกคนในแท็บเดียว) -->
+  <div class="panel" id="panel-quickentry">
+    <h2 style="margin-bottom:14px;">📝 กรอกเงินเดือนรายเดือน</h2>
+    <p style="color:#666; margin-bottom:12px; font-size:14px;">
+      💡 กรอกเงินเดือนของทุกคนในกลุ่มภายในหน้าเดียว — เลือก เดือน+ปี+กลุ่ม แล้วกรอกข้อมูลทีละแถว
+      ข้อมูลจะไปโผล่ในตารางสรุป, ใบพิมพ์ และสลิปโดยอัตโนมัติ
+    </p>
+    <div class="toolbar">
+      <select id="qeGroup">
+        <option value="BCF ไทย">BCF ไทย</option>
+        <option value="BCF พม่า">BCF พม่า</option>
+        <option value="ฟาร์ม1">ฟาร์ม1</option>
+        <option value="ฟาร์ม3">ฟาร์ม3</option>
+        <option value="SNP">SNP</option>
+      </select>
+      <select id="qeYear"></select>
+      <select id="qeMonth">
+        <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
+        <option value="3">มีนาคม</option><option value="4">เมษายน</option>
+        <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
+        <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
+        <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
+        <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+      </select>
+      <button class="btn-primary" onclick="loadQuickEntry()">📋 โหลดพนักงาน</button>
+      <button class="btn-success" id="btnSaveQuickEntry" onclick="saveQuickEntry()" style="display:none;">💾 บันทึกทั้งหมด</button>
+      <span id="qeStatus" style="margin-left:auto; color:#666; font-size:13px;"></span>
+    </div>
+    <!-- Bulk tools: apply วันที่ให้ทุกคนพร้อมกัน -->
+    <div id="qeBulkTools" style="display:none; margin-top:10px; padding:10px 14px; background:linear-gradient(135deg,#fff3e0 0%,#ffe0b2 100%); border-left:4px solid #ff9800; border-radius:6px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <span style="font-weight:600; color:#e65100;">⚡ เครื่องมือกรอกไว:</span>
+      <label style="font-size:13px; display:flex; align-items:center; gap:4px;">📅 วันจ่าย:
+        <input type="text" id="qeBulkDate" placeholder="dd/mm/yy" maxlength="10" style="width:100px; padding:5px 8px; border:1px solid #ccc; border-radius:4px; font-size:13px;">
+        <button type="button" onclick="openDatePicker(this)" title="เลือกจากปฏิทิน" style="padding:2px 7px; background:#f0f4f8; border:1px solid #bdc3c7; border-radius:3px; cursor:pointer; font-size:13px;">📅</button>
+      </label>
+      <button class="btn-primary" onclick="applyBulkDate()" style="padding:6px 14px; font-size:13px;">📅 ใส่วันให้ทุกคน</button>
+      <button class="btn-secondary" onclick="applyBulkDateToEmpty()" style="padding:6px 14px; font-size:13px;" title="เฉพาะคนที่ยังไม่ได้ใส่วัน">📅 ใส่เฉพาะช่องว่าง</button>
+      <span style="font-size:11px; color:#795548; margin-left:auto;">💡 พิมพ์ ddmmyy (เช่น 300469) แล้วระบบจะจัดรูป</span>
+    </div>
+    <div id="qeWrap" style="margin-top:16px;">
+      <div style="text-align:center; padding:60px; color:#999;">
+        👆 เลือก กลุ่ม + ปี + เดือน แล้วกด "โหลดพนักงาน"
+      </div>
+    </div>
+  </div>
+
+  <!-- SALARY ENTRY -->
+  <div class="panel" id="panel-salary">
+    <div class="toolbar">
+      <select id="salGroup">
+        <option value="BCF ไทย">BCF ไทย</option>
+        <option value="BCF พม่า">BCF พม่า</option>
+        <option value="ฟาร์ม1">ฟาร์ม1</option>
+        <option value="ฟาร์ม3">ฟาร์ม3</option>
+        <option value="SNP">SNP</option>
+      </select>
+      <select id="salYear"></select>
+      <select id="salEmployee"><option value="">-- เลือกพนักงาน --</option></select>
+      <button class="btn-primary" onclick="loadSalary()">📋 โหลดข้อมูล</button>
+    </div>
+    
+    <div id="salaryFormArea" style="display:none;">
+      <div style="background:#f8f9fa; padding:14px; border-radius:6px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <strong id="salEmpName" style="font-size:16px;">-</strong>
+          <span style="color:#666; margin-left:10px;" id="salEmpInfo"></span>
+        </div>
+        <div style="color:#666; font-size:13px;">💡 ประกันสังคมคำนวณอัตโนมัติ 5% (สูงสุด 875)</div>
+      </div>
+      
+      <div style="overflow-x:auto; border:1px solid #e0e0e0; border-radius:6px;">
+        <table class="salary-table" style="min-width: 1200px;">
+          <thead>
+            <tr>
+              <th style="width:110px;">เดือน</th>
+              <th style="width:110px;">เงินเดือน</th>
+              <th style="width:110px;">รายได้อื่น</th>
+              <th style="width:110px;">รวม</th>
+              <th style="width:110px;">ประกันสังคม</th>
+              <th style="width:110px;">ภาษีเงินได้</th>
+              <th style="width:110px;">กองทุนสลช.</th>
+              <th style="width:120px; background:#27ae60;">รับสุทธิ</th>
+              <th style="width:100px;">รับโดย</th>
+              <th style="width:90px;">ว.ด.ป.</th>
+            </tr>
+          </thead>
+          <tbody id="salaryTbody"></tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td class="month-cell">สรุปรวม</td>
+              <td class="calc-cell" data-col="salary">0</td>
+              <td class="calc-cell" data-col="otherIncome">0</td>
+              <td class="calc-cell" data-col="total">0</td>
+              <td class="calc-cell" data-col="sso">0</td>
+              <td class="calc-cell" data-col="tax">0</td>
+              <td class="calc-cell" data-col="pvd">0</td>
+              <td class="net-cell" data-col="net">0</td>
+              <td colspan="2"></td>
+            </tr>
+            <tr class="bonus-row">
+              <td class="bonus-label">⭐ BONUS</td>
+              <td colspan="3"><input type="number" id="bonusAmount" placeholder="จำนวนเงินโบนัส" style="text-align:right; padding:6px 10px;"></td>
+              <td colspan="3"></td>
+              <td class="net-cell" id="bonusDisplay">0</td>
+              <td><input type="text" id="bonusReceivedBy" placeholder="รับโดย" style="padding:6px 10px;"></td>
+              <td><input type="text" id="bonusDate" placeholder="dd/MM" style="padding:6px 10px;"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div style="margin-top:14px; display:flex; justify-content:flex-end;">
+        <button class="btn-success" onclick="saveSalaryData()" id="btnSaveSalary" style="padding:10px 24px;">💾 บันทึกทั้งปี</button>
+      </div>
+    </div>
+    <div id="salaryEmptyState" style="text-align:center; padding:60px; color:#999;">
+      👆 กรุณาเลือกกลุ่ม ปี และพนักงาน แล้วกด "โหลดข้อมูล"
+    </div>
+  </div>
+
+  <!-- SUMMARY TABLE -->
+  <div class="panel" id="panel-summary">
+    <h2 style="margin-bottom:14px;">📋 ตารางสรุปเงินเดือน</h2>
+    
+    <div style="background:#fff; padding:14px; border-radius:6px; margin-bottom:12px; border:1px solid #ddd;">
+      <div style="margin-bottom:10px; font-weight:600; color:#1a5276;">📑 ประเภทตาราง:</div>
+      <div style="display:flex; gap:20px; flex-wrap:wrap;">
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+          <input type="radio" name="summaryType" value="yearly" checked onchange="updateSummaryUI()"> 
+          <span><strong>📅 รายปี</strong> (ทะเบียน 12 เดือน)</span>
+        </label>
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+          <input type="radio" name="summaryType" value="monthly" onchange="updateSummaryUI()"> 
+          <span><strong>📆 รายเดือน</strong> (สรุปเดือนเดียว)</span>
+        </label>
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+          <input type="radio" name="summaryType" value="sso" onchange="updateSummaryUI()"> 
+          <span><strong>🏥 รายงาน ปกส.</strong> (ประกันสังคม)</span>
+        </label>
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+          <input type="radio" name="summaryType" value="tax" onchange="updateSummaryUI()"> 
+          <span><strong>💼 รายงาน TAX</strong> (ภาษีหัก ณ ที่จ่าย)</span>
+        </label>
+      </div>
+    </div>
+    
+    <div class="toolbar">
+      <select id="summaryGroup">
+        <option value="BCF ไทย">BCF ไทย</option>
+        <option value="BCF พม่า">BCF พม่า</option>
+        <option value="ฟาร์ม1">ฟาร์ม1</option>
+        <option value="ฟาร์ม3">ฟาร์ม3</option>
+        <option value="SNP">SNP</option>
+      </select>
+      <select id="summaryYear"></select>
+      <select id="summaryMonth" style="display:none;">
+        <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
+        <option value="3">มีนาคม</option><option value="4">เมษายน</option>
+        <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
+        <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
+        <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
+        <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+      </select>
+      <button class="btn-primary" onclick="loadSummaryTable()">📋 แสดงตาราง</button>
+      <button class="btn-success" onclick="printSummaryTable()">🖨️ พิมพ์ตาราง</button>
+      <button class="btn-secondary" onclick="exportSummaryXlsx()">⬇️ ดาวน์โหลด Excel</button>
+    </div>
+    <div id="summaryTableWrap" style="margin-top:16px; overflow-x:auto;">
+      <div style="text-align:center; padding:60px; color:#999;">
+        👆 เลือกประเภท + กลุ่ม + ปี (+ เดือน) แล้วกด "แสดงตาราง"
+      </div>
+    </div>
+  </div>
+
+  <!-- PRINT -->
+  <div class="panel" id="panel-print">
+    <h2 style="margin-bottom:14px;">🖨️ พิมพ์เอกสาร</h2>
+    
+    <div class="print-section">
+      <h3 style="margin-bottom:10px;">📄 ใบสำคัญจ่ายเงินเดือน (รายปี)</h3>
+      <p style="margin-bottom:12px; color:#666; font-size:14px;">แบบฟอร์ม 12 เดือน ประจำปี - 1 คน/กระดาษ A4 แนวนอน</p>
+      <div class="toolbar">
+        <select id="printYearlyGroup">
+          <option value="BCF ไทย">BCF ไทย</option>
+          <option value="BCF พม่า">BCF พม่า</option>
+          <option value="ฟาร์ม1">ฟาร์ม1</option>
+          <option value="ฟาร์ม3">ฟาร์ม3</option>
+          <option value="SNP">SNP</option>
+        </select>
+        <select id="printYearlyYear"></select>
+        <select id="printYearlyEmp"><option value="">-- พิมพ์ทั้งกลุ่ม --</option></select>
+      </div>
+      
+      <div style="background:white; padding:14px; border-radius:6px; margin-top:10px; border:1px solid #ffc107;">
+        <div style="margin-bottom:10px; font-weight:600; color:#856404;">🖨️ โหมดพิมพ์:</div>
+        <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:12px;">
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="radio" name="yearlyMode" value="full" checked onchange="updateYearlyMode()"> 
+            <span><strong>พิมพ์เต็มใบ</strong> (กระดาษเปล่า · ครั้งแรก)</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="radio" name="yearlyMode" value="data-only" onchange="updateYearlyMode()"> 
+            <span><strong>พิมพ์เฉพาะข้อมูล</strong> (ใบเดิม · เดือนถัดไป)</span>
+          </label>
+        </div>
+        
+        <div style="margin-bottom:10px; font-weight:600; color:#856404;">📅 พิมพ์ข้อมูลเดือน:</div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+          <button type="button" class="btn-sm btn-secondary" onclick="selectYearlyMonths('all')">เลือกทั้งหมด</button>
+          <button type="button" class="btn-sm btn-secondary" onclick="selectYearlyMonths('none')">ล้าง</button>
+        </div>
+        <div id="yearlyMonthChecks" style="display:grid; grid-template-columns:repeat(6, 1fr); gap:6px;"></div>
+        
+        <div style="margin-top:10px; padding-top:10px; border-top:1px solid #ffe69c;">
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px;">
+            <input type="checkbox" id="yearlyIncludeBonus"> 
+            <span>📌 พิมพ์แถวโบนัสด้วย (ปกติพิมพ์ตอนสิ้นปี)</span>
+          </label>
+        </div>
+        
+        <details style="margin-top:12px;">
+          <summary style="cursor:pointer; color:#666; font-size:13px;">⚙️ ปรับตำแหน่งพิมพ์ (ถ้าตัวเลขเลื่อนไม่ตรงช่อง)</summary>
+          <div style="margin-top:10px; display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
+            <label>เลื่อนซ้าย-ขวา (mm): 
+              <input type="number" id="yearlyOffsetX" value="0" step="0.5" style="width:70px; padding:4px 8px; border:1px solid #ddd; border-radius:3px;">
+            </label>
+            <label>เลื่อนบน-ล่าง (mm): 
+              <input type="number" id="yearlyOffsetY" value="0" step="0.5" style="width:70px; padding:4px 8px; border:1px solid #ddd; border-radius:3px;">
+            </label>
+            <span style="color:#666; font-size:12px;">ตัวเลขบวก = เลื่อนลง/ขวา, ลบ = เลื่อนขึ้น/ซ้าย</span>
+          </div>
+        </details>
+      </div>
+      
+      <div style="margin-top:12px; display:flex; gap:10px;">
+        <button class="btn-primary" onclick="printYearly(false)">🖨️ พิมพ์คนเดียว</button>
+        <button class="btn-success" onclick="printYearly(true)">📑 พิมพ์ทั้งกลุ่ม</button>
+      </div>
+    </div>
+
+    <div class="print-section slip">
+      <h3 style="margin-bottom:10px;">🧾 สลิปเงินเดือน (Pay Slip)</h3>
+      <p style="margin-bottom:12px; color:#666; font-size:14px;">สลิปรายเดือน - 4 สลิป/กระดาษ A4 แนวตั้ง</p>
+      <div class="toolbar">
+        <select id="printSlipGroup">
+          <option value="BCF ไทย">BCF ไทย</option>
+          <option value="BCF พม่า">BCF พม่า</option>
+          <option value="ฟาร์ม1">ฟาร์ม1</option>
+          <option value="ฟาร์ม3">ฟาร์ม3</option>
+          <option value="SNP">SNP</option>
+        </select>
+        <select id="printSlipYear"></select>
+        <select id="printSlipMonth">
+          <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
+          <option value="3">มีนาคม</option><option value="4">เมษายน</option>
+          <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
+          <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
+          <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
+          <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+        </select>
+        <select id="printSlipEmp"><option value="">-- พิมพ์ทั้งกลุ่ม --</option></select>
+      </div>
+      
+      <div style="background:white; padding:14px; border-radius:6px; margin-top:10px; border:1px solid #17a2b8;">
+        <div style="margin-bottom:10px; font-weight:600; color:#0c5460;">🖨️ โหมดพิมพ์:</div>
+        <div style="display:flex; gap:20px; flex-wrap:wrap;">
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="radio" name="slipMode" value="full" checked> 
+            <span><strong>พิมพ์เต็มใบ</strong> (กระดาษเปล่า)</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="radio" name="slipMode" value="data-only"> 
+            <span><strong>พิมพ์เฉพาะข้อมูล</strong> (ใบเดิม)</span>
+          </label>
+        </div>
+        
+        <details style="margin-top:12px;">
+          <summary style="cursor:pointer; color:#666; font-size:13px;">⚙️ ปรับตำแหน่งพิมพ์ (ถ้าตัวเลขเลื่อนไม่ตรงช่อง)</summary>
+          <div style="margin-top:10px; display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
+            <label>เลื่อนซ้าย-ขวา (mm): 
+              <input type="number" id="slipOffsetX" value="0" step="0.5" style="width:70px; padding:4px 8px; border:1px solid #ddd; border-radius:3px;">
+            </label>
+            <label>เลื่อนบน-ล่าง (mm): 
+              <input type="number" id="slipOffsetY" value="0" step="0.5" style="width:70px; padding:4px 8px; border:1px solid #ddd; border-radius:3px;">
+            </label>
+          </div>
+        </details>
+      </div>
+      
+      <div style="margin-top:12px; display:flex; gap:10px;">
+        <button class="btn-primary" onclick="printSlip(false)">🖨️ พิมพ์คนเดียว</button>
+        <button class="btn-success" onclick="printSlip(true)">📑 พิมพ์ทั้งกลุ่ม</button>
+      </div>
+    </div>
+
+    <!-- 50 ทวิ -->
+    <div class="print-section" style="background:#faf2e0; border-color:#d4a017; margin-top:14px;">
+      <h3 style="margin-bottom:10px;">📜 หนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ)</h3>
+      <p style="font-size:12px; color:#666; margin-bottom:12px;">
+        สำหรับพนักงานใช้ยื่นภาษีเงินได้บุคคลธรรมดาประจำปี
+        · ต้องกรอก <strong>ที่อยู่พนักงาน</strong> ในหน้าพนักงานก่อน
+      </p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>กลุ่ม</label>
+          <select id="printWhtGroup">
+            <option value="BCF ไทย">BCF ไทย</option>
+            <option value="BCF พม่า">BCF พม่า</option>
+            <option value="ฟาร์ม1">ฟาร์ม1</option>
+            <option value="ฟาร์ม3">ฟาร์ม3</option>
+            <option value="SNP">SNP</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>ปีภาษี (พ.ศ.)</label>
+          <select id="printWhtYear"></select>
+        </div>
+        <div class="form-group">
+          <label>พนักงาน (เลือกคน)</label>
+          <select id="printWhtEmp"><option value="">-- พิมพ์ทั้งกลุ่ม --</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>วันที่ออกหนังสือรับรอง</label>
+          <input type="text" id="printWhtIssueDate" placeholder="dd/MM/yyyy (พ.ศ.)">
+          <small style="color:#7f8c8d; font-size:11px; margin-top:4px; display:block;">
+            💡 เว้นว่าง = ใช้ 30/12/[ปีภาษี]
+          </small>
+        </div>
+        <div class="form-group">
+          <label>ลำดับที่เริ่มต้น</label>
+          <input type="number" id="printWhtStartNo" min="1" value="1">
+          <small style="color:#7f8c8d; font-size:11px; margin-top:4px; display:block;">
+            💡 เลขที่จะเพิ่มทีละ 1 ต่อคน (มุมขวาบน)
+          </small>
+        </div>
+      </div>
+      <div style="margin-top:12px; display:flex; gap:10px;">
+        <button class="btn-primary" onclick="printWhtCert(false)">🖨️ พิมพ์คนเดียว</button>
+        <button class="btn-success" onclick="printWhtCert(true)">📑 พิมพ์ทั้งกลุ่ม</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="panel" id="panel-settings">
+    <h2 style="margin-bottom:18px;">⚙️ ตั้งค่าระบบ</h2>
+    
+    <!-- Google Sheets Sync Section -->
+    <div style="background:linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%); padding:20px; border-radius:10px; border:2px solid #1a5276; margin-bottom:16px;">
+      <h3 style="margin-bottom:12px; color:#1a5276; display:flex; align-items:center; gap:8px;">
+        ☁️ เชื่อมต่อ Google Sheets (สำคัญ!)
+      </h3>
+      
+      <!-- Connection Status Card -->
+      <div id="syncStatusCard" style="background:white; padding:14px; border-radius:8px; margin-bottom:14px; border-left:4px solid #95a5a6;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+          <div>
+            <div style="font-size:13px; color:#666;">สถานะการเชื่อมต่อ</div>
+            <div id="connectStatus" style="font-size:16px; font-weight:600; margin-top:2px;">-</div>
+            <div id="connectUrl" style="font-size:11px; color:#7f8c8d; word-break:break-all; margin-top:4px; font-family:monospace;">-</div>
+          </div>
+          <div id="syncStatsInfo" style="font-size:12px; color:#666; text-align:right; min-width:140px;">-</div>
+        </div>
+      </div>
+      
+      <!-- Action buttons - จะสลับตามสถานะ -->
+      <div id="syncActionsNotConnected" style="display:none;">
+        <p style="color:#856404; background:#fff3cd; padding:10px 14px; border-radius:6px; border-left:4px solid #ffc107; margin-bottom:12px; font-size:14px;">
+          ⚠️ <strong>ข้อมูลเก็บในเครื่องเดียว!</strong> ถ้าเปลี่ยนเครื่องหรือล้าง cache ข้อมูลจะหาย — แนะนำให้เชื่อมต่อ Google Sheets
+        </p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn-success" onclick="connectSheets()" style="padding:10px 22px; font-size:14px; font-weight:600;">🔗 เชื่อมต่อ Google Sheets</button>
+          <button class="btn-secondary" onclick="showSheetsGuide()">📖 ดูวิธีตั้งค่า</button>
+        </div>
+      </div>
+      
+      <div id="syncActionsConnected" style="display:none;">
+        <div style="background:#e8f5e9; padding:12px 14px; border-left:4px solid #27ae60; border-radius:6px; margin-bottom:12px; font-size:13px; color:#2e7d32;">
+          📌 <strong>เปลี่ยนเครื่องใหม่?</strong> เปิดเว็บนี้จากเครื่องไหนก็ได้ แล้วกด "🔗 เชื่อมต่อ Google Sheets" วาง URL เดิม 1 ครั้ง — ข้อมูลจะ sync ตามมาทันที
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn-primary" onclick="manualSync()">🔄 Sync เดี๋ยวนี้</button>
+          <button class="btn-success" onclick="testConnection()">✓ ทดสอบการเชื่อมต่อ</button>
+          <button class="btn-secondary" onclick="changeUrl()">✏️ เปลี่ยน URL</button>
+          <button class="btn-secondary" onclick="showSheetsGuide()">📖 คู่มือ</button>
+          <button class="btn-danger" onclick="disconnect()">🔌 ตัดการเชื่อมต่อ</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- BACKUP 30 วันบน SHEETS -->
+    <div style="background:#fef9e7; padding:18px; border-radius:8px; border:2px solid #f39c12; margin-bottom:16px;">
+      <h3 style="margin-bottom:10px; color:#9a7d0a;">🗄️ ข้อมูลสำรองอัตโนมัติบน Sheets (ย้อนหลัง 30 วัน)</h3>
+      <p style="margin-bottom:12px; color:#666; font-size:14px;">
+        ระบบสำรองข้อมูลให้อัตโนมัติวันละ 1 ครั้ง (ตอนบันทึกครั้งแรกของวัน) เก็บไว้ในชีต "Backups" วนลูป 30 วัน —
+        ถ้าข้อมูลเสียหายหรือลบผิด เลือกวันที่แล้วกดกู้คืนได้เลย
+      </p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <button class="btn-secondary" id="btnLoadBackups" onclick="loadBackupList()">🔄 โหลดรายการสำรอง</button>
+        <select id="backupDateSelect" style="padding:8px 12px; border:1px solid #ccc; border-radius:4px; font-size:14px; min-width:220px;">
+          <option value="">— กดโหลดรายการก่อน —</option>
+        </select>
+        <button class="btn-warning" id="btnRestoreBackup" onclick="restoreFromBackup()" disabled style="font-weight:600;">♻️ กู้คืนจากวันที่เลือก</button>
+      </div>
+    </div>
+    
+    <div class="warning-box">
+      <h3>🚀 เริ่มต้นใช้งาน</h3>
+      <p style="margin-bottom:12px;">ครั้งแรกที่ใช้งาน กดปุ่มด้านล่างเพื่อนำเข้าข้อมูลพนักงานตัวอย่าง</p>
+      <button class="btn-warning" onclick="importSample()">📥 นำเข้าข้อมูลตัวอย่าง</button>
+    </div>
+
+    <div style="background:#f8f9fa; padding:18px; border-radius:8px;">
+      <h3 style="margin-bottom:10px;">📥 นำเข้า / ส่งออก ข้อมูล (Backup)</h3>
+      <p style="margin-bottom:12px; color:#666; font-size:14px;">สำรองข้อมูลหรือกู้คืนจากไฟล์ JSON — แนะนำให้ backup สัปดาห์ละครั้ง</p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn-success" onclick="exportData()">⬇️ ส่งออกเป็น JSON</button>
+        <button class="btn-primary" onclick="document.getElementById('importFile').click()">⬆️ นำเข้าจาก JSON</button>
+        <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
+        <button class="btn-secondary" onclick="restoreSnapshot()" title="กู้คืนข้อมูลก่อนถูกทับ/ลบครั้งล่าสุด">♻️ กู้คืนข้อมูลสำรองในเครื่อง</button>
+        <button class="btn-danger" onclick="clearAllData()">🗑️ ลบข้อมูลทั้งหมด</button>
+      </div>
+    </div>
+
+    <div style="background:#f8f9fa; padding:18px; border-radius:8px; margin-top:16px;">
+      <h3 style="margin-bottom:10px;">ℹ️ ข้อมูลระบบ</h3>
+      <table>
+        <tr><td><strong>ประกันสังคม:</strong></td><td>5% ของเงินเดือน (ฐานขั้นต่ำ 1,650 — ฐานสูงสุด 17,500 = สูงสุด 875 บาท/เดือน) • ม.33 ปี 2569-2571</td></tr>
+        <tr><td><strong>Sync Interval:</strong></td><td>Auto-pull ทุก 30 วินาที, Push หลังแก้ไข 800ms</td></tr>
+        <tr><td><strong>Storage:</strong></td><td id="storageMode">localStorage (offline)</td></tr>
+        <tr><td><strong>เวอร์ชัน:</strong></td><td><span id="settingsVersionCell">3.0.0</span> (Multi-file PWA · network-first ไม่ค้างเวอร์ชันเก่า)</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD/EDIT EMPLOYEE -->
+<div class="modal-backdrop" id="empModal">
+  <div class="modal">
+    <h2 id="empModalTitle">เพิ่มพนักงานใหม่</h2>
+    <input type="hidden" id="empModalMode" value="add">
+    <input type="hidden" id="empOriginalId" value="">
+    <div class="form-row">
+      <div class="form-group">
+        <label>รหัสพนักงาน *</label>
+        <input type="text" id="empId" required placeholder="เช่น B125, T-10, F1-01, F3-01, SNP-01">
+      </div>
+      <div class="form-group">
+        <label>กลุ่ม *</label>
+        <select id="empGroup" onchange="suggestEmpId()">
+          <option value="BCF ไทย">BCF ไทย</option>
+          <option value="BCF พม่า">BCF พม่า</option>
+          <option value="ฟาร์ม1">ฟาร์ม1</option>
+          <option value="ฟาร์ม3">ฟาร์ม3</option>
+          <option value="SNP">SNP</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>ชื่อ *</label>
+        <input type="text" id="empFirstName" required>
+      </div>
+      <div class="form-group">
+        <label>นามสกุล</label>
+        <input type="text" id="empLastName">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Name (EN)</label>
+        <input type="text" id="empNameEn" placeholder="สำหรับพนักงานพม่า">
+      </div>
+      <div class="form-group">
+        <label>ตำแหน่ง</label>
+        <input type="text" id="empPosition">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>เลขที่บัตรประชาชน</label>
+        <input type="text" id="empIdCard">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:1;">
+        <label>ที่อยู่ (สำหรับหนังสือรับรอง 50 ทวิ)</label>
+        <input type="text" id="empAddress" placeholder="เช่น 27/5 หมู่ 5 ต.แก่งเสี้ยน อ.เมือง จ.กาญจนบุรี">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>วันที่เริ่มงาน (dd/MM/yyyy)</label>
+        <input type="text" id="empStartDate" placeholder="15/01/2024">
+      </div>
+      <div class="form-group">
+        <label>วันที่ออกจากงาน</label>
+        <input type="text" id="empEndDate" placeholder="ว่าง = ยังทำงานอยู่">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>อัตรากองทุน ลูกจ้าง (%)</label>
+        <input type="number" id="empFundRate" min="0" max="15" step="0.5" placeholder="0" value="0">
+        <small style="color:#7f8c8d; font-size:11px; margin-top:4px; display:block;">
+          💡 พนักงานกำหนดเอง 0-15% (0 = ไม่เข้ากองทุน)
+        </small>
+      </div>
+      <div class="form-group">
+        <label>อัตรากองทุน นายจ้าง (%)</label>
+        <input type="number" id="empFundRateEmployer" min="0" max="15" step="0.5" placeholder="0" value="0">
+        <small style="color:#7f8c8d; font-size:11px; margin-top:4px; display:block;">
+          💡 บริษัทกำหนด 0-15% (อิสระจากลูกจ้าง)
+        </small>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeEmpModal()">ยกเลิก</button>
+      <button class="btn-success" onclick="saveEmp()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/version.js"></script>
+<script src="js/00-logo.js"></script>
+<script src="js/01-embedded-url.js"></script>
+<script src="js/02-gs-template.js"></script>
+<script src="js/03-secure-url.js"></script>
+<script src="js/10-state.js"></script>
+<script src="js/11-storage.js"></script>
+<script src="js/12-sync.js"></script>
+<script src="js/13-utils.js"></script>
+<script src="js/20-dashboard.js"></script>
+<script src="js/21-employees.js"></script>
+<script src="js/22-salary.js"></script>
+<script src="js/23-print.js"></script>
+<script src="js/24-quickentry.js"></script>
+<script src="js/25-summary.js"></script>
+<script src="js/26-print-templates.js"></script>
+<script src="js/27-settings.js"></script>
+<script src="js/28-sample-data.js"></script>
+<script src="js/30-init.js"></script>
+<script src="js/31-auth.js"></script>
+</body>
+</html>
