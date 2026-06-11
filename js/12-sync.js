@@ -117,7 +117,12 @@ async function pullFromSheet(silent) {
       const serverTime = new Date(result.data.updatedAt || 0).getTime();
       const localTime = new Date(state.data.updatedAt || 0).getTime();
       
-      if (serverTime > localTime) {
+      // เครื่องนี้ว่างเปล่าแต่ Sheets มีข้อมูล → รับมาเสมอ (ไม่สน timestamp)
+      // กันเคสเครื่องใหม่ที่ updatedAt ในเครื่องบังเอิญใหม่กว่า server
+      const localEmpty = !state.data.employees || state.data.employees.length === 0;
+      const serverHasData = result.data.employees && result.data.employees.length > 0;
+      
+      if (serverTime > localTime || (localEmpty && serverHasData)) {
         stashSnapshot('ก่อนรับข้อมูลจาก Sheets มาแทนที่');
         state.data = result.data;
         if (!state.data.employees) state.data.employees = [];

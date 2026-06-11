@@ -26,7 +26,9 @@ let state = {
     salaries: {},   // key: "empId_year_month" -> salary object
     bonuses: {},    // key: "empId_year" -> bonus object
     version: 1,
-    updatedAt: new Date().toISOString()
+    // เริ่มต้นด้วยเวลาเก่าสุด — เครื่องใหม่ที่ยังไม่มีข้อมูลต้อง "แพ้" ข้อมูลบน Sheets เสมอ
+    // (saveLocal จะประทับเวลาปัจจุบันให้เองเมื่อมีการบันทึกจริง)
+    updatedAt: '1970-01-01T00:00:00.000Z'
   },
   config: {
     webAppUrl: ''
