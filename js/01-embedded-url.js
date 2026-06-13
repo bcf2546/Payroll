@@ -1,3 +1,0 @@
-// ==== EMBEDDED_WEBAPP_URL_START ====
-window.EMBEDDED_WEBAPP_URL = '';
-// ==== EMBEDDED_WEBAPP_URL_END ====
