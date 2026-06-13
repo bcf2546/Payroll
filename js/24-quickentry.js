@@ -214,8 +214,8 @@ function loadQuickEntry() {
     html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:100px;">เข้าบัญชี</th>';
     html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:90px; background:#1e8449;">รับสุทธิ</th>';
     html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:70px;">ว.ด.ป.</th>';
-    html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:70px; background:#1a6091;">SSO นจ.</th>';
     html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:70px; background:#1a6091;">PVD นจ.</th>';
+    html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:70px; background:#1a6091;">SSO นจ.</th>';
     html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:160px;">📝 หมายเหตุ</th>';
   }
   html += '</tr></thead><tbody>';
@@ -275,10 +275,12 @@ function loadQuickEntry() {
     // รับสุทธิ (readonly) — ย้ายมาหลังเข้าบัญชี
     html += '<td class="qe-net" style="border:1px solid #ddd; padding:4px 6px; text-align:right; font-weight:bold; color:' + (isMyanmar ? '#d35400' : '#1e8449') + '; background:' + (isMyanmar ? '#fff5ee' : '#d5f5e3') + ';">-</td>';
     html += qeInputText('receivedDate', receivedDate, 'dd/MM');
-    // ช่องนายจ้าง
-    html += qeInput('ssoEmployer', ssoEmployer);
+    // ช่องนายจ้าง — ไทย: PVD นจ. ก่อน SSO นจ. (สลับให้ตรงตารางสรุป) / พม่า: มีแค่ SSO นจ.
     if (!isMyanmar) {
       html += qeInput('pvdEmployer', pvdEmployer);
+      html += qeInput('ssoEmployer', ssoEmployer);
+    } else {
+      html += qeInput('ssoEmployer', ssoEmployer);
     }
     html += qeInputText('note', note, 'บันทึก...');
     html += '</tr>';
@@ -322,9 +324,9 @@ function loadQuickEntry() {
     html += '<td class="qe-total-cell qe-total-bank" style="' + cellStyle + ' color:#2471a3;">-</td>';  // bank
     html += '<td class="qe-total-cell qe-total-net" style="' + cellStyle + ' color:#1e8449;">-</td>';
     html += '<td style="border:1px solid #ddd; padding:6px 8px;"></td>';  // date
-    // ssoEmployer, pvdEmployer
-    html += '<td class="qe-total-cell" data-field="ssoEmployer" style="' + cellStyle + '">-</td>';
+    // pvdEmployer, ssoEmployer (สลับให้ตรงตารางสรุป)
     html += '<td class="qe-total-cell" data-field="pvdEmployer" style="' + cellStyle + '">-</td>';
+    html += '<td class="qe-total-cell" data-field="ssoEmployer" style="' + cellStyle + '">-</td>';
     // note
     html += '<td style="border:1px solid #ddd; padding:6px 8px;"></td>';
   }
