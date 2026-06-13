@@ -44,6 +44,7 @@ function loadQuickEntry() {
   html += '<div style="display:flex; gap:8px; margin-bottom:10px; align-items:center; flex-wrap:wrap; padding:8px 12px; background:#f8f9fa; border-radius:6px; border:1px solid #e9ecef;">';
   html += '<button class="btn-secondary" onclick="copyFromPrevMonth()" style="font-size:13px;">📋 Copy จากเดือนก่อน</button>';
   html += '<button class="btn-secondary" onclick="clearAllQuickEntry()" style="font-size:13px;">🧹 ล้างทุกช่อง</button>';
+  html += '<button class="btn-secondary" onclick="recalcAllBankRows()" style="font-size:13px; background:#eaf4fb; border-color:#aed6f1; color:#1a5276;" title="คำนวณช่องเข้าบัญชีใหม่ทุกแถว = รับสุทธิ − เงินสด">🔧 คำนวณเข้าบัญชีใหม่</button>';
   html += '<button class="btn-secondary" onclick="showKeyboardHelp()" style="font-size:13px;" title="กด ?">⌨️ Shortcuts</button>';
   html += '<div style="flex:1;"></div>';
   html += '<input type="text" id="qeSearch" oninput="filterQuickEntry()" placeholder="🔍 ค้นหาชื่อ/รหัส... (กด /)" style="padding:6px 10px; border:1px solid #ccc; border-radius:4px; font-size:13px; min-width:200px;">';
@@ -970,6 +971,33 @@ function autoCalcBankRow(tr, netOverride) {
   } else {
     bankInput.value = '';
   }
+}
+
+/* ปุ่ม 🔧: บังคับคำนวณช่อง "เข้าบัญชี" ใหม่ทุกแถว = รับสุทธิ − เงินสด
+ * ล้าง flag userEdited ทิ้งก่อน เพื่อให้เขียนทับค่าเก่า/ค่าเพี้ยนได้
+ * แก้เคสข้อมูลเก่าที่ช่องเข้าบัญชีถูกตัด/บันทึกค่าเพี้ยน */
+function recalcAllBankRows() {
+  const wrap = document.getElementById('qeWrap');
+  if (!wrap) return;
+  const rows = wrap.querySelectorAll('.qe-table tbody tr[data-empid]');
+  if (rows.length === 0) { toast('ไม่มีข้อมูลให้คำนวณ', 'info'); return; }
+  
+  if (!confirm('🔧 คำนวณช่อง "เข้าบัญชี" ใหม่ทุกแถว?\n\nสูตร: เข้าบัญชี = รับสุทธิ − เงินสด\nใช้แก้ข้อมูลเก่าที่ตัวเลขเข้าบัญชีเพี้ยน/ถูกตัด\n\n⚠️ จะเขียนทับค่าเข้าบัญชีเดิมทุกแถว — อย่าลืมกด 💾 บันทึกทั้งหมด หลังตรวจดูแล้ว')) return;
+  
+  let changed = 0;
+  rows.forEach(tr => {
+    const bankInput = tr.querySelector('[data-field="bank"]');
+    if (!bankInput) return;
+    const before = bankInput.value;
+    bankInput.dataset.userEdited = 'false';  // ปลดล็อก ให้คำนวณทับได้
+    updateQeNet(tr);                          // คำนวณรับสุทธิ + เข้าบัญชีใหม่
+    if (bankInput.value !== before) changed++;
+  });
+  
+  updateQeTotals();
+  updateQeStatus();
+  scheduleQeDraftSave();
+  toast('🔧 คำนวณเข้าบัญชีใหม่แล้ว ' + changed + ' แถว — ตรวจดูแล้วกด 💾 บันทึกทั้งหมด เพื่อบันทึกขึ้น Sheets', 'success');
 }
 
 function applyBulkDate() {
