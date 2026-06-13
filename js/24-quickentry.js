@@ -76,7 +76,7 @@ function loadQuickEntry() {
     html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:75px; background:#e67e22;">หนี้อื่นๆ</th>';
     html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:70px; background:#e67e22;">หยุด</th>';
     html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:80px;">เงินสด</th>';
-    html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:85px;">เข้าบัญชี</th>';
+    html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:100px;">เข้าบัญชี</th>';
     html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:85px; background:#ba4a00;">รับสุทธิ</th>';
     html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:70px;">ว.ด.ป.</th>';
     html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:70px; background:#ba4a00;">SSO นจ.</th>';
@@ -89,7 +89,7 @@ function loadQuickEntry() {
     html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:70px;">TAX</th>';
     html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:70px;">PVD ลจ.</th>';
     html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:80px;">เงินสด</th>';
-    html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:85px;">เข้าบัญชี</th>';
+    html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:100px;">เข้าบัญชี</th>';
     html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:90px; background:#1e8449;">รับสุทธิ</th>';
     html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:70px;">ว.ด.ป.</th>';
     html += '<th style="border:1px solid ' + headerBorder + '; padding:6px 4px; min-width:70px; background:#1a6091;">SSO นจ.</th>';
@@ -149,7 +149,7 @@ function loadQuickEntry() {
     // เงินสด (input) → auto-calc เข้าบัญชี
     html += qeInput('cash', cash);
     // เข้าบัญชี (input ตัวเลข — auto-calc = รับสุทธิ - เงินสด, override ได้)
-    html += qeInput('bank', typeof bank === 'number' ? bank : (parseFloat(bank) || ''));
+    html += qeInput('bank', typeof bank === 'number' ? bank : (parseFloat(bank) || ''), 'min-width:95px; width:100%; text-align:right;');
     // รับสุทธิ (readonly) — ย้ายมาหลังเข้าบัญชี
     html += '<td class="qe-net" style="border:1px solid #ddd; padding:4px 6px; text-align:right; font-weight:bold; color:' + (isMyanmar ? '#d35400' : '#1e8449') + '; background:' + (isMyanmar ? '#fff5ee' : '#d5f5e3') + ';">-</td>';
     html += qeInputText('receivedDate', receivedDate, 'dd/MM');
@@ -181,7 +181,7 @@ function loadQuickEntry() {
     html += '<td class="qe-total-cell" data-field="holiday" style="' + cellStyle + ' color:#c0392b;">-</td>';
     // cash, bank, net, date
     html += '<td class="qe-total-cell qe-total-cash" style="' + cellStyle + '">-</td>';
-    html += '<td style="border:1px solid #ddd; padding:6px 8px;"></td>';  // bank
+    html += '<td class="qe-total-cell qe-total-bank" style="' + cellStyle + ' color:#2471a3;">-</td>';  // bank
     html += '<td class="qe-total-cell qe-total-net" style="' + cellStyle + ' color:#d35400;">-</td>';
     html += '<td style="border:1px solid #ddd; padding:6px 8px;"></td>';  // date
     // ssoEmployer
@@ -197,7 +197,7 @@ function loadQuickEntry() {
     html += '<td class="qe-total-cell" data-field="pvd" style="' + cellStyle + '">-</td>';
     // cash, bank, net, date
     html += '<td class="qe-total-cell qe-total-cash" style="' + cellStyle + '">-</td>';
-    html += '<td style="border:1px solid #ddd; padding:6px 8px;"></td>';  // bank
+    html += '<td class="qe-total-cell qe-total-bank" style="' + cellStyle + ' color:#2471a3;">-</td>';  // bank
     html += '<td class="qe-total-cell qe-total-net" style="' + cellStyle + ' color:#1e8449;">-</td>';
     html += '<td style="border:1px solid #ddd; padding:6px 8px;"></td>';  // date
     // ssoEmployer, pvdEmployer
@@ -647,11 +647,12 @@ function filterQuickEntry() {
   }
 }
 
-function qeInput(field, val) {
+function qeInput(field, val, extraStyle) {
   const displayVal = (val !== '' && val !== null && val !== undefined && !isNaN(val)) 
     ? Number(val).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
     : '';
-  return '<td style="border:1px solid #ddd;"><input class="num" type="text" inputmode="decimal" data-field="' + field + '" value="' + displayVal + '" placeholder="0"></td>';
+  const st = extraStyle ? (' style="' + extraStyle + '"') : '';
+  return '<td style="border:1px solid #ddd;"><input class="num" type="text" inputmode="decimal" data-field="' + field + '" value="' + displayVal + '"' + st + ' placeholder="0"></td>';
 }
 function qeInputText(field, val, placeholder) {
   // ถ้าเป็นช่องวันที่ → เพิ่มปุ่มปฏิทินข้างๆ
@@ -1040,6 +1041,7 @@ function updateQeTotals() {
     : ['salary', 'otherIncome', 'sso', 'ssoEmployer', 'tax', 'pvd', 'pvdEmployer'];
   let totalNet = 0;
   let totalCash = 0;
+  let totalBank = 0;
   const sumMap = {};
   fields.forEach(f => sumMap[f] = 0);
   
@@ -1053,12 +1055,14 @@ function updateQeTotals() {
     const tax = qeReadNum(tr.querySelector('[data-field="tax"]'));
     const pvd = qeReadNum(tr.querySelector('[data-field="pvd"]'));
     const cash = qeReadNum(tr.querySelector('[data-field="cash"]'));
+    const bank = qeReadNum(tr.querySelector('[data-field="bank"]'));
     const bonus = qeReadNum(tr.querySelector('[data-field="bonus"]'));
     const ot = qeReadNum(tr.querySelector('[data-field="ot"]'));
     const holiday = qeReadNum(tr.querySelector('[data-field="holiday"]'));
     const debt = qeReadNum(tr.querySelector('[data-field="debt"]'));
     totalNet += salary + otherIncome + bonus + ot - sso - tax - pvd - holiday - debt;
     totalCash += cash;
+    totalBank += bank;
   });
   
   // เขียนค่าลงเซลล์ตาม data-field
@@ -1073,6 +1077,8 @@ function updateQeTotals() {
   if (netCell) netCell.textContent = totalNet ? totalNet.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '-';
   const cashCell = wrap.querySelector('.qe-total-cash');
   if (cashCell) cashCell.textContent = totalCash ? totalCash.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '-';
+  const bankCell = wrap.querySelector('.qe-total-bank');
+  if (bankCell) bankCell.textContent = totalBank ? totalBank.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '-';
 }
 
 /* ============================================================
