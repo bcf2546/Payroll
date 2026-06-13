@@ -271,7 +271,7 @@ function loadQuickEntry() {
     // เงินสด (input) → auto-calc เข้าบัญชี
     html += qeInput('cash', cash);
     // เข้าบัญชี (input ตัวเลข — auto-calc = รับสุทธิ - เงินสด, override ได้)
-    html += qeInput('bank', typeof bank === 'number' ? bank : (parseFloat(bank) || ''), 'min-width:95px; width:100%; text-align:right;');
+    html += qeInput('bank', typeof bank === 'number' ? bank : (parseFloat(String(bank).replace(/,/g,'')) || ''), 'min-width:95px; width:100%; text-align:right;');
     // รับสุทธิ (readonly) — ย้ายมาหลังเข้าบัญชี
     html += '<td class="qe-net" style="border:1px solid #ddd; padding:4px 6px; text-align:right; font-weight:bold; color:' + (isMyanmar ? '#d35400' : '#1e8449') + '; background:' + (isMyanmar ? '#fff5ee' : '#d5f5e3') + ';">-</td>';
     html += qeInputText('receivedDate', receivedDate, 'dd/MM');
@@ -1369,7 +1369,9 @@ function saveQuickEntry() {
     const holiday = isMyanmar ? qeReadNum(tr.querySelector('[data-field="holiday"]')) : 0;
     const debt = isMyanmar ? qeReadNum(tr.querySelector('[data-field="debt"]')) : 0;
     const cash = qeReadNum(tr.querySelector('[data-field="cash"]'));
-    const bank = (tr.querySelector('[data-field="bank"]') || {}).value || '';
+    // เก็บ bank เป็นตัวเลขสะอาด (strip comma) — กันปัญหา parseFloat ตัดที่ comma ตอนโหลดกลับ
+    const bankRaw = (tr.querySelector('[data-field="bank"]') || {}).value || '';
+    const bank = bankRaw === '' ? '' : (parseFloat(String(bankRaw).replace(/,/g,'')) || 0);
     const receivedDate = (tr.querySelector('[data-field="receivedDate"]') || {}).value || '';
     const note = (tr.querySelector('[data-field="note"]') || {}).value || '';
     
