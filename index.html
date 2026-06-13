@@ -193,15 +193,31 @@
       <button class="btn-success" onclick="openEmpModal()">➕ เพิ่มพนักงาน</button>
     </div>
     <div class="table-wrap">
+      <h3 style="margin:6px 0 8px; color:#1e8449; font-size:16px;">✅ กำลังทำงาน <span id="empActiveCount" style="font-size:13px; color:#888; font-weight:normal;"></span></h3>
+      <p style="margin:0 0 8px; font-size:12px; color:#999;">💡 ลากแถว (จับที่ ⠿) เพื่อจัดลำดับเอง — ลำดับนี้จะใช้ทั้งระบบ ทุกหน้า</p>
       <table id="empTable">
         <thead>
           <tr>
+            <th style="width:28px;"></th>
             <th>รหัส</th><th>ชื่อ</th><th>นามสกุล</th><th>Name (EN)</th>
             <th>ตำแหน่ง</th><th>เลขบัตรประชาชน</th><th>วันเริ่มงาน</th>
             <th>กลุ่ม</th><th>PVD ลจ.%</th><th>PVD นจ.%</th><th>สถานะ</th><th>จัดการ</th>
           </tr>
         </thead>
-        <tbody id="empTbody"><tr><td colspan="12" class="loading">กำลังโหลด...</td></tr></tbody>
+        <tbody id="empTbody"><tr><td colspan="13" class="loading">กำลังโหลด...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="table-wrap" style="margin-top:24px;">
+      <h3 style="margin:6px 0 8px; color:#c0392b; font-size:16px;">👋 ลาออกแล้ว <span id="empResignedCount" style="font-size:13px; color:#888; font-weight:normal;"></span></h3>
+      <table id="empTableResigned">
+        <thead>
+          <tr>
+            <th>รหัส</th><th>ชื่อ</th><th>นามสกุล</th><th>Name (EN)</th>
+            <th>ตำแหน่ง</th><th>เลขบัตรประชาชน</th><th>วันเริ่มงาน</th><th>วันลาออก</th>
+            <th>กลุ่ม</th><th>สถานะ</th><th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="empTbodyResigned"></tbody>
       </table>
     </div>
   </div>
@@ -214,15 +230,15 @@
       ข้อมูลจะไปโผล่ในตารางสรุป, ใบพิมพ์ และสลิปโดยอัตโนมัติ
     </p>
     <div class="toolbar">
-      <select id="qeGroup">
+      <select id="qeGroup" onchange="onQeSelectorChange()">
         <option value="BCF ไทย">BCF ไทย</option>
         <option value="BCF พม่า">BCF พม่า</option>
         <option value="ฟาร์ม1">ฟาร์ม1</option>
         <option value="ฟาร์ม3">ฟาร์ม3</option>
         <option value="SNP">SNP</option>
       </select>
-      <select id="qeYear"></select>
-      <select id="qeMonth">
+      <select id="qeYear" onchange="onQeSelectorChange()"></select>
+      <select id="qeMonth" onchange="onQeSelectorChange()">
         <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
         <option value="3">มีนาคม</option><option value="4">เมษายน</option>
         <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
