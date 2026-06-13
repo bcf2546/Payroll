@@ -17,6 +17,127 @@ function bindQuickEntryDropdowns() {
   if (monthSel) monthSel.value = (new Date().getMonth() + 1);
 }
 
+/* ---- ข้อ 11: เปลี่ยน dropdown → โหลดอัตโนมัติ + เตือนถ้ามีข้อมูลค้าง ----
+ * เช็คว่ามีแถวที่กรอกค่าไว้ในตาราง แต่ค่ายังไม่ตรงกับที่บันทึกใน state (ยังไม่เซฟ) */
+let qeLoaded = false;  // ตารางถูกโหลดแล้วหรือยัง (ถ้ายัง = เปลี่ยน dropdown โหลดได้เลย)
+
+function hasUnsavedQeData() {
+  const wrap = document.getElementById('qeWrap');
+  if (!wrap) return false;
+  const rows = wrap.querySelectorAll('.qe-table tbody tr[data-empid]');
+  if (rows.length === 0) return false;
+  // ปี/เดือน/กลุ่ม "ที่ตารางถูกโหลดมา" (เก็บไว้ตอน loadQuickEntry) — ใช้เทียบกับ state
+  const ly = wrap.dataset.loadedYear, lm = wrap.dataset.loadedMonth;
+  if (!ly || !lm) return false;
+  const year = parseInt(ly), month = parseInt(lm);
+  
+  for (const tr of rows) {
+    const empId = tr.dataset.empid;
+    const s = state.data.salaries[salaryKey(empId, year, month)] || {};
+    // เทียบค่าในช่องกับค่าที่บันทึกไว้ — ต่างกัน = มีข้อมูลค้างยังไม่เซฟ
+    const fields = ['salary','otherIncome','bonus','ot','holiday','debt','sso','ssoEmployer','tax','pvd','pvdEmployer','cash'];
+    for (const f of fields) {
+      const inp = tr.querySelector('[data-field="' + f + '"]');
+      if (!inp) continue;
+      const cur = qeReadNum(inp);
+      const saved = Number(s[f]) || 0;
+      if (cur !== saved) return true;
+    }
+    // เช็ค bank + note + วันที่ ด้วย
+    const bankInp = tr.querySelector('[data-field="bank"]');
+    if (bankInp) {
+      const curBank = qeReadNum(bankInp);
+      const savedBankRaw = s.bank || s.receivedBy || '';
+      const savedBank = typeof savedBankRaw === 'number' ? savedBankRaw : (parseFloat(String(savedBankRaw).replace(/,/g,'')) || 0);
+      if (curBank !== savedBank) return true;
+    }
+  }
+  return false;
+}
+
+function onQeSelectorChange() {
+  // ตารางยังไม่เคยโหลด → โหลดเลย
+  const wrap = document.getElementById('qeWrap');
+  const hasTable = wrap && wrap.querySelector('.qe-table tbody tr[data-empid]');
+  if (!hasTable) { loadQuickEntry(); return; }
+  
+  // มีข้อมูลค้างยังไม่เซฟ → เตือน 3 ทาง
+  if (hasUnsavedQeData()) {
+    showQeSwitchModal();
+  } else {
+    loadQuickEntry();  // ไม่มีค้าง → โหลดเลย
+  }
+}
+
+/* modal เตือนตอนเปลี่ยนเดือนทั้งที่มีข้อมูลค้าง (ข้อ 11) */
+function showQeSwitchModal() {
+  let modal = document.getElementById('qeSwitchModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'qeSwitchModal';
+    modal.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center;';
+    modal.innerHTML =
+      '<div style="background:white; border-radius:12px; padding:26px 30px; max-width:440px; width:92%; box-shadow:0 16px 48px rgba(0,0,0,0.25);">' +
+        '<h3 style="margin:0 0 6px; color:#e67e22; font-size:17px;">⚠️ ยังไม่ได้บันทึก</h3>' +
+        '<p style="margin:0 0 18px; color:#7f8c8d; font-size:13px;">มีข้อมูลที่กรอกไว้ยังไม่ได้กดบันทึก จะทำอย่างไรก่อนเปลี่ยน?</p>' +
+        '<div style="display:flex; flex-direction:column; gap:10px;">' +
+          '<button onclick="qeSwitchSaveFirst()" style="padding:12px 16px; border:1px solid #a9dfbf; border-radius:8px; background:#eafaf1; cursor:pointer; text-align:left; font-size:14px; font-family:inherit;">' +
+            '💾 <strong>บันทึกก่อน แล้วค่อยเปลี่ยน</strong><br><span style="font-size:12px; color:#888;">เซฟขึ้น Sheets แล้วโหลดข้อมูลเดือนใหม่</span></button>' +
+          '<button onclick="qeSwitchDiscard()" style="padding:12px 16px; border:1px solid #f5b7b1; border-radius:8px; background:#fdf2f0; cursor:pointer; text-align:left; font-size:14px; font-family:inherit;">' +
+            '↪️ <strong>เปลี่ยนเลย ไม่บันทึก</strong><br><span style="font-size:12px; color:#888;">ทิ้งที่กรอกค้าง (ยังกู้คืนได้จากระบบ draft)</span></button>' +
+          '<button onclick="qeSwitchCancel()" style="padding:10px 16px; border:none; border-radius:8px; background:#f0f4f8; cursor:pointer; font-size:14px; font-family:inherit; color:#555;">ยกเลิก (อยู่เดือนเดิม)</button>' +
+        '</div>' +
+      '</div>';
+    modal.addEventListener('mousedown', (e) => { modal._downBg = (e.target === modal); });
+    modal.addEventListener('mouseup', (e) => { if (modal._downBg && e.target === modal) qeSwitchCancel(); modal._downBg = false; });
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+}
+
+function qeCloseSwitchModal() {
+  const m = document.getElementById('qeSwitchModal');
+  if (m) m.style.display = 'none';
+}
+
+function qeSwitchSaveFirst() {
+  qeCloseSwitchModal();
+  // บันทึกข้อมูลเดือนเดิมก่อน (saveQuickEntry อ่านจาก dropdown ปัจจุบัน — ต้องเซฟด้วยค่าเดิม)
+  // แต่ dropdown เปลี่ยนไปแล้ว → ใช้ค่า loadedYear/Month ที่จำไว้
+  saveQuickEntryForLoaded();
+  loadQuickEntry();
+}
+
+function qeSwitchDiscard() {
+  qeCloseSwitchModal();
+  loadQuickEntry();  // โหลดใหม่ทับ — draft ยังมี กู้คืนได้
+}
+
+function qeSwitchCancel() {
+  qeCloseSwitchModal();
+  // คืน dropdown กลับไปเดือน/ปี/กลุ่มเดิมที่ตารางโหลดอยู่
+  const wrap = document.getElementById('qeWrap');
+  if (wrap.dataset.loadedGroup) document.getElementById('qeGroup').value = wrap.dataset.loadedGroup;
+  if (wrap.dataset.loadedYear) document.getElementById('qeYear').value = wrap.dataset.loadedYear;
+  if (wrap.dataset.loadedMonth) document.getElementById('qeMonth').value = wrap.dataset.loadedMonth;
+}
+
+/* บันทึกโดยใช้กลุ่ม/ปี/เดือน "ที่ตารางโหลดมา" (ไม่ใช่ค่า dropdown ปัจจุบันที่อาจเปลี่ยนแล้ว) */
+function saveQuickEntryForLoaded() {
+  const wrap = document.getElementById('qeWrap');
+  const g = document.getElementById('qeGroup');
+  const y = document.getElementById('qeYear');
+  const m = document.getElementById('qeMonth');
+  const curG = g.value, curY = y.value, curM = m.value;
+  // สลับ dropdown กลับไปค่าเดิมชั่วคราว เพื่อให้ saveQuickEntry บันทึกถูกเดือน
+  if (wrap.dataset.loadedGroup) g.value = wrap.dataset.loadedGroup;
+  if (wrap.dataset.loadedYear) y.value = wrap.dataset.loadedYear;
+  if (wrap.dataset.loadedMonth) m.value = wrap.dataset.loadedMonth;
+  saveQuickEntry();
+  // คืนค่า dropdown ปัจจุบัน (ที่ผู้ใช้เพิ่งเลือก)
+  g.value = curG; y.value = curY; m.value = curM;
+}
+
 function loadQuickEntry() {
   const group = document.getElementById('qeGroup').value;
   const year = parseInt(document.getElementById('qeYear').value);
@@ -27,7 +148,7 @@ function loadQuickEntry() {
   const emps = state.data.employees.filter(e => 
     e.group === group && isActiveForMonthView(e, year, month)
   );
-  emps.sort((a, b) => (a.empId || '').localeCompare(b.empId || ''));
+  sortEmployees(emps);
   
   if (emps.length === 0) {
     wrap.innerHTML = '<div style="text-align:center; padding:60px; color:#999;">ไม่พบพนักงานในกลุ่มนี้</div>';
@@ -309,6 +430,19 @@ function loadQuickEntry() {
   updateQeTotals();
   updateQeStatus();
   
+  // จำกลุ่ม/ปี/เดือนที่โหลด ไว้เทียบตอนเปลี่ยน dropdown (ข้อ 11)
+  const prevMonth = wrap.dataset.loadedMonth;
+  const prevYear = wrap.dataset.loadedYear;
+  wrap.dataset.loadedGroup = group;
+  wrap.dataset.loadedYear = String(year);
+  wrap.dataset.loadedMonth = String(month);
+  
+  // ข้อ 12: เปลี่ยนเดือน/ปี → ล้างช่องวันจ่ายในเครื่องมือกรอกไว (แต่ละเดือนวันจ่ายไม่เหมือนกัน)
+  if (prevMonth !== undefined && (prevMonth !== String(month) || prevYear !== String(year))) {
+    const bulkDate = document.getElementById('qeBulkDate');
+    if (bulkDate) bulkDate.value = '';
+  }
+  
   // Draft: ครอบทุก input (รวมช่องวันที่/หมายเหตุ/บัญชี ที่ไม่ใช่ .num) — ผูกครั้งเดียว
   if (!wrap.dataset.draftBound) {
     wrap.dataset.draftBound = '1';
@@ -384,7 +518,8 @@ function deleteQuickEntryRow(empId) {
           '<button onclick="qeDelCloseModal()" style="padding:10px 16px; border:none; border-radius:8px; background:#f0f4f8; cursor:pointer; font-size:14px; font-family:inherit; color:#555;">ยกเลิก</button>' +
         '</div>' +
       '</div>';
-    modal.addEventListener('click', (e) => { if (e.target === modal) qeDelCloseModal(); });
+    modal.addEventListener('mousedown', (e) => { modal._downBg = (e.target === modal); });
+    modal.addEventListener('mouseup', (e) => { if (modal._downBg && e.target === modal) qeDelCloseModal(); modal._downBg = false; });
     document.body.appendChild(modal);
   }
   document.getElementById('qeDelModalTitle').textContent = empName + ' (' + empId + ')';

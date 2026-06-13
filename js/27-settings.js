@@ -133,7 +133,7 @@ function showSheetsGuide() {
   modal = document.createElement('div');
   modal.id = 'sheetsGuideModal';
   modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:10000; display:flex; align-items:center; justify-content:center; padding:20px; overflow-y:auto;';
-  modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+  bindModalBackdropClose(modal, () => { modal.style.display = 'none'; });
   
   const gsCode = (window.GS_CODE_TEMPLATE || '(Code.gs content)');
   

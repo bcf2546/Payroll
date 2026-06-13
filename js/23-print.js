@@ -6,7 +6,7 @@ function bindPrintDropdowns() {
   // Yearly
   const groupY = document.getElementById('printYearlyGroup').value;
   const empsY = state.data.employees.filter(e => e.group === groupY);
-  empsY.sort((a, b) => (a.empId || '').localeCompare(b.empId || ''));
+  empsY.sort(employeeComparator());
   document.getElementById('printYearlyEmp').innerHTML =
     '<option value="">-- พิมพ์ทั้งกลุ่ม --</option>' +
     empsY.map(e => `<option value="${escapeHtml(e.empId)}">${escapeHtml(e.empId)} - ${escapeHtml(e.firstName)} ${escapeHtml(e.lastName || e.nameEn || '')}</option>`).join('');
@@ -14,7 +14,7 @@ function bindPrintDropdowns() {
   // Slip
   const groupS = document.getElementById('printSlipGroup').value;
   const empsS = state.data.employees.filter(e => e.group === groupS);
-  empsS.sort((a, b) => (a.empId || '').localeCompare(b.empId || ''));
+  empsS.sort(employeeComparator());
   document.getElementById('printSlipEmp').innerHTML =
     '<option value="">-- พิมพ์ทั้งกลุ่ม --</option>' +
     empsS.map(e => `<option value="${escapeHtml(e.empId)}">${escapeHtml(e.empId)} - ${escapeHtml(e.firstName)} ${escapeHtml(e.lastName || e.nameEn || '')}</option>`).join('');
@@ -23,7 +23,7 @@ function bindPrintDropdowns() {
   const groupW = document.getElementById('printWhtGroup');
   if (groupW) {
     const empsW = state.data.employees.filter(e => e.group === groupW.value);
-    empsW.sort((a, b) => (a.empId || '').localeCompare(b.empId || ''));
+    empsW.sort(employeeComparator());
     document.getElementById('printWhtEmp').innerHTML =
       '<option value="">-- พิมพ์ทั้งกลุ่ม --</option>' +
       empsW.map(e => `<option value="${escapeHtml(e.empId)}">${escapeHtml(e.empId)} - ${escapeHtml(e.firstName)} ${escapeHtml(e.lastName || e.nameEn || '')}</option>`).join('');
@@ -102,7 +102,7 @@ function printYearly(multi) {
     return;
   }
   
-  emps.sort((a, b) => (a.empId || '').localeCompare(b.empId || ''));
+  emps.sort(employeeComparator());
   openPrintWindow('yearly', { emps, year, mode, selectedMonths, includeBonus, offsetX, offsetY });
 }
 
@@ -140,6 +140,6 @@ function printSlip(multi) {
   const offsetX = parseFloat(document.getElementById('slipOffsetX').value) || 0;
   const offsetY = parseFloat(document.getElementById('slipOffsetY').value) || 0;
   
-  emps.sort((a, b) => (a.empId || '').localeCompare(b.empId || ''));
+  emps.sort(employeeComparator());
   openPrintWindow('slip', { emps, year, month, mode, offsetX, offsetY });
 }

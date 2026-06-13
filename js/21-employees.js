@@ -17,34 +17,117 @@ function renderEmployees() {
     );
   }
   
-  // Sort by empId
-  emps.sort((a, b) => (a.empId || '').localeCompare(b.empId || ''));
+  // แยกคนทำงาน / ลาออกแล้ว
+  const active = emps.filter(e => isActiveNow(e)).sort(employeeComparator());
+  const resigned = emps.filter(e => !isActiveNow(e)).sort(employeeComparator());
   
+  // ---- ตารางกำลังทำงาน (ลากจัดลำดับได้) ----
   const tbody = document.getElementById('empTbody');
-  if (emps.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="12" class="loading">ไม่พบข้อมูล</td></tr>';
-    return;
+  document.getElementById('empActiveCount').textContent = '(' + active.length + ' คน)';
+  if (active.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="13" class="loading">ไม่พบพนักงานที่ทำงานอยู่</td></tr>';
+  } else {
+    tbody.innerHTML = active.map(e => `
+      <tr draggable="true" data-empid="${escapeHtml(e.empId)}" class="emp-drag-row">
+        <td style="text-align:center; cursor:grab; color:#bbb; font-size:18px;" class="emp-drag-handle" title="ลากเพื่อจัดลำดับ">⠿</td>
+        <td><strong>${escapeHtml(e.empId)}</strong></td>
+        <td>${escapeHtml(e.firstName || '')}</td>
+        <td>${escapeHtml(e.lastName || '')}</td>
+        <td>${escapeHtml(e.nameEn || '')}</td>
+        <td>${escapeHtml(e.position || '')}</td>
+        <td>${escapeHtml(e.idCard || '')}</td>
+        <td>${escapeHtml(e.startDate || '')}</td>
+        <td>${escapeHtml(e.group)}</td>
+        <td style="text-align:center;">${(e.fundRate && e.fundRate > 0) ? '<span style="background:#e8f5e9; color:#27ae60; padding:2px 8px; border-radius:10px; font-weight:600;">' + e.fundRate + '%</span>' : '<span style="color:#bdc3c7;">-</span>'}</td>
+        <td style="text-align:center;">${(e.fundRateEmployer && e.fundRateEmployer > 0) ? '<span style="background:#e3f2fd; color:#1976d2; padding:2px 8px; border-radius:10px; font-weight:600;">' + e.fundRateEmployer + '%</span>' : '<span style="color:#bdc3c7;">-</span>'}</td>
+        <td><span class="badge badge-active">ทำงาน</span></td>
+        <td>
+          <button class="btn-primary btn-sm" onclick="editEmp('${encodeURIComponent(e.empId)}')">✏️</button>
+          <button class="btn-danger btn-sm" onclick="delEmp('${encodeURIComponent(e.empId)}')">🗑️</button>
+        </td>
+      </tr>
+    `).join('');
+    setupEmpDragDrop();
   }
   
-  tbody.innerHTML = emps.map(e => `
-    <tr>
-      <td><strong>${escapeHtml(e.empId)}</strong></td>
-      <td>${escapeHtml(e.firstName || '')}</td>
-      <td>${escapeHtml(e.lastName || '')}</td>
-      <td>${escapeHtml(e.nameEn || '')}</td>
-      <td>${escapeHtml(e.position || '')}</td>
-      <td>${escapeHtml(e.idCard || '')}</td>
-      <td>${escapeHtml(e.startDate || '')}</td>
-      <td>${escapeHtml(e.group)}</td>
-      <td style="text-align:center;">${(e.fundRate && e.fundRate > 0) ? '<span style="background:#e8f5e9; color:#27ae60; padding:2px 8px; border-radius:10px; font-weight:600;">' + e.fundRate + '%</span>' : '<span style="color:#bdc3c7;">-</span>'}</td>
-      <td style="text-align:center;">${(e.fundRateEmployer && e.fundRateEmployer > 0) ? '<span style="background:#e3f2fd; color:#1976d2; padding:2px 8px; border-radius:10px; font-weight:600;">' + e.fundRateEmployer + '%</span>' : '<span style="color:#bdc3c7;">-</span>'}</td>
-      <td><span class="badge ${e.endDate ? 'badge-inactive' : 'badge-active'}">${e.endDate ? 'ออกแล้ว' : 'ทำงาน'}</span></td>
-      <td>
-        <button class="btn-primary btn-sm" onclick="editEmp('${encodeURIComponent(e.empId)}')">✏️</button>
-        <button class="btn-danger btn-sm" onclick="delEmp('${encodeURIComponent(e.empId)}')">🗑️</button>
-      </td>
-    </tr>
-  `).join('');
+  // ---- ตารางลาออกแล้ว (เรียงตามรหัส ไม่ลาก) ----
+  const tbodyR = document.getElementById('empTbodyResigned');
+  document.getElementById('empResignedCount').textContent = '(' + resigned.length + ' คน)';
+  if (resigned.length === 0) {
+    tbodyR.innerHTML = '<tr><td colspan="11" class="loading">ไม่มีพนักงานที่ลาออก</td></tr>';
+  } else {
+    tbodyR.innerHTML = resigned.map(e => `
+      <tr style="opacity:0.72;">
+        <td><strong>${escapeHtml(e.empId)}</strong></td>
+        <td>${escapeHtml(e.firstName || '')}</td>
+        <td>${escapeHtml(e.lastName || '')}</td>
+        <td>${escapeHtml(e.nameEn || '')}</td>
+        <td>${escapeHtml(e.position || '')}</td>
+        <td>${escapeHtml(e.idCard || '')}</td>
+        <td>${escapeHtml(e.startDate || '')}</td>
+        <td style="color:#c0392b;">${escapeHtml(e.endDate || '')}</td>
+        <td>${escapeHtml(e.group)}</td>
+        <td><span class="badge badge-inactive">ออกแล้ว</span></td>
+        <td>
+          <button class="btn-primary btn-sm" onclick="editEmp('${encodeURIComponent(e.empId)}')">✏️</button>
+          <button class="btn-danger btn-sm" onclick="delEmp('${encodeURIComponent(e.empId)}')">🗑️</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+}
+
+/* ---- Drag & Drop จัดลำดับพนักงาน (ตารางกำลังทำงาน) ----
+ * บันทึกลำดับลง state.data.empOrder (ทั้งกลุ่ม รวมกันในลำดับเดียว)
+ * เก็บขึ้น Sheets ผ่าน schedulePush */
+let empDragSrc = null;
+
+function setupEmpDragDrop() {
+  const rows = document.querySelectorAll('#empTbody tr.emp-drag-row');
+  rows.forEach(row => {
+    row.addEventListener('dragstart', (e) => {
+      empDragSrc = row;
+      row.style.opacity = '0.4';
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => {
+      row.style.opacity = '';
+      document.querySelectorAll('#empTbody tr.emp-drag-row').forEach(r => r.style.borderTop = '');
+    });
+    row.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (row !== empDragSrc) row.style.borderTop = '3px solid #2980b9';
+    });
+    row.addEventListener('dragleave', () => { row.style.borderTop = ''; });
+    row.addEventListener('drop', (e) => {
+      e.preventDefault();
+      row.style.borderTop = '';
+      if (!empDragSrc || empDragSrc === row) return;
+      const tbody = document.getElementById('empTbody');
+      const rowsArr = [...tbody.querySelectorAll('tr.emp-drag-row')];
+      const srcIdx = rowsArr.indexOf(empDragSrc);
+      const tgtIdx = rowsArr.indexOf(row);
+      // วางก่อน/หลังตามทิศ
+      if (srcIdx < tgtIdx) row.after(empDragSrc);
+      else row.before(empDragSrc);
+      commitEmpOrder();
+    });
+  });
+}
+
+/* อ่านลำดับแถวปัจจุบันในตาราง → เขียนลง empOrder → push */
+function commitEmpOrder() {
+  const tbody = document.getElementById('empTbody');
+  const ids = [...tbody.querySelectorAll('tr.emp-drag-row')].map(r => r.dataset.empid);
+  if (!state.data.empOrder) state.data.empOrder = {};
+  // ให้ลำดับเริ่มจากค่าฐานสูงๆ เผื่อคนใหม่/กลุ่มอื่นแทรก — ใช้ index ตรงๆ พอ
+  // เก็บเฉพาะคนในตารางที่เห็น แล้วต่อท้ายด้วยคนอื่นที่มีลำดับเดิม
+  let pos = 0;
+  ids.forEach(id => { state.data.empOrder[id] = pos++; });
+  saveLocal();
+  schedulePush();
+  toast('✅ จัดลำดับแล้ว — ใช้ทั้งระบบ บันทึกขึ้น Sheets อัตโนมัติ', 'success');
 }
 
 function escapeHtml(s) {

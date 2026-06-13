@@ -128,6 +128,7 @@ async function pullFromSheet(silent) {
         if (!state.data.employees) state.data.employees = [];
         if (!state.data.salaries) state.data.salaries = {};
         if (!state.data.bonuses) state.data.bonuses = {};
+        if (!state.data.empOrder) state.data.empOrder = {};
         saveLocal();
         
         // Re-render ที่เปิดอยู่

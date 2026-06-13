@@ -140,6 +140,7 @@ function writeAll(data) {
     ['version', data.version || 1],
     ['จำนวนพนักงาน', employees.length],
     ['จำนวนรายการเงินเดือน', salKeys.length],
+    ['empOrder', JSON.stringify(data.empOrder || {})],
     ['บันทึกล่าสุดโดย script เมื่อ', Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss')]
   ]);
 }
@@ -175,10 +176,16 @@ function readAll() {
     });
   }
 
+  var empOrder = {};
+  if (meta['empOrder']) {
+    try { empOrder = JSON.parse(meta['empOrder']); } catch (e) { empOrder = {}; }
+  }
+
   return {
     employees: employees,
     salaries: salaries,
     bonuses: bonuses,
+    empOrder: empOrder,
     version: meta['version'] || 1,
     updatedAt: meta['updatedAt'] || ''
   };

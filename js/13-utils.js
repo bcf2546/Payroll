@@ -2,6 +2,76 @@
 /* ============================================================
  * UTILITIES
  * ============================================================ */
+
+/* ---- การเรียงลำดับพนักงาน (ใช้ทั้งระบบ) ----
+ * ลำดับความสำคัญ:
+ *   1. ลำดับที่ผู้ใช้จัดเอง (drag & drop) — เก็บใน state.data.empOrder[empId] = ตำแหน่ง
+ *   2. ถ้าไม่มีลำดับเอง → natural sort ตามรหัส (T-2 มาก่อน T-10, B100 หลัง B11)
+ * natural sort: แยกตัวเลขในรหัสออกมาเทียบเป็นเลขจริง ไม่ใช่ตัวอักษร */
+function naturalCompareId(a, b) {
+  const ax = String(a || ''), bx = String(b || '');
+  // แตกเป็นชิ้น: ตัวอักษร / ตัวเลข สลับกัน
+  const re = /(\d+|\D+)/g;
+  const ap = ax.match(re) || [], bp = bx.match(re) || [];
+  const n = Math.max(ap.length, bp.length);
+  for (let i = 0; i < n; i++) {
+    const as = ap[i] || '', bs = bp[i] || '';
+    const an = parseInt(as, 10), bn = parseInt(bs, 10);
+    const aIsNum = !isNaN(an) && /^\d+$/.test(as);
+    const bIsNum = !isNaN(bn) && /^\d+$/.test(bs);
+    if (aIsNum && bIsNum) {
+      if (an !== bn) return an - bn;       // เทียบเป็นเลขจริง
+    } else {
+      const c = as.localeCompare(bs, 'th');
+      if (c !== 0) return c;
+    }
+  }
+  return 0;
+}
+
+/* คืน comparator สำหรับ .sort() — เคารพลำดับ custom ก่อน แล้วค่อย natural */
+function employeeComparator() {
+  const order = (state.data && state.data.empOrder) || {};
+  return function (a, b) {
+    const ao = order[a.empId], bo = order[b.empId];
+    const aHas = ao !== undefined && ao !== null;
+    const bHas = bo !== undefined && bo !== null;
+    if (aHas && bHas) {
+      if (ao !== bo) return ao - bo;        // ทั้งคู่มีลำดับเอง → ใช้ลำดับนั้น
+    } else if (aHas) {
+      return -1;                            // คนมีลำดับเอง มาก่อนคนไม่มี
+    } else if (bHas) {
+      return 1;
+    }
+    return naturalCompareId(a.empId, b.empId);  // fallback: natural sort
+  };
+}
+
+/* เรียง array พนักงาน in-place ตามลำดับมาตรฐานของระบบ แล้ว return array เดิม */
+function sortEmployees(arr) {
+  return arr.sort(employeeComparator());
+}
+
+/* ---- ปิด modal แบบปลอดภัย (กันลากเมาส์คลุมข้อความแล้ว modal ปิดเอง) ----
+ * ปัญหาเดิม: ใช้ event 'click' ที่ backdrop → ถ้าเริ่มลากในช่อง input แล้วปล่อยเมาส์
+ *   นอกกรอบ จะนับเป็น click ที่ backdrop → ปิด modal ทิ้งข้อมูล
+ * วิธีแก้: ปิดเฉพาะเมื่อ "เริ่มกด (mousedown) ที่ backdrop เอง" เท่านั้น
+ * ใช้: bindModalBackdropClose(modalEl, closeFn)  — backdropMatch บอกว่า element ไหนคือพื้นหลัง */
+function bindModalBackdropClose(modalEl, closeFn, backdropMatch) {
+  if (!modalEl || modalEl.dataset.backdropBound === '1') return;
+  modalEl.dataset.backdropBound = '1';
+  let downOnBackdrop = false;
+  const isBackdrop = backdropMatch || ((target) => target === modalEl);
+  modalEl.addEventListener('mousedown', (e) => {
+    downOnBackdrop = isBackdrop(e.target);
+  });
+  modalEl.addEventListener('mouseup', (e) => {
+    // ปิดเฉพาะเมื่อ "ทั้งกดและปล่อย" อยู่ที่ backdrop (ไม่ใช่ลากออกมาจากในกรอบ)
+    if (downOnBackdrop && isBackdrop(e.target)) closeFn();
+    downOnBackdrop = false;
+  });
+}
+
 function toast(msg, type) {
   const t = document.getElementById('toast');
   t.textContent = msg;

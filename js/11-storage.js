@@ -22,6 +22,7 @@ function loadLocal() {
       if (!state.data.employees) state.data.employees = [];
       if (!state.data.salaries) state.data.salaries = {};
       if (!state.data.bonuses) state.data.bonuses = {};
+      if (!state.data.empOrder) state.data.empOrder = {};
     }
   } catch (e) {
     console.error('Load local failed:', e);

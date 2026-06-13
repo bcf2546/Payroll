@@ -582,7 +582,7 @@ function printWhtCert(multi) {
     return;
   }
   
-  emps.sort((a, b) => (a.empId || '').localeCompare(b.empId || ''));
+  sortEmployees(emps);
   
   // Default วันออกหนังสือ = 30/12/ปีภาษี
   const issueDate = issueDateRaw || ('30/12/' + year);

@@ -25,6 +25,7 @@ let state = {
     employees: [],
     salaries: {},   // key: "empId_year_month" -> salary object
     bonuses: {},    // key: "empId_year" -> bonus object
+    empOrder: {},   // empId -> ลำดับที่ผู้ใช้จัดเอง (drag & drop) ใช้ทั้งระบบ
     version: 1,
     // เริ่มต้นด้วยเวลาเก่าสุด — เครื่องใหม่ที่ยังไม่มีข้อมูลต้อง "แพ้" ข้อมูลบน Sheets เสมอ
     // (saveLocal จะประทับเวลาปัจจุบันให้เองเมื่อมีการบันทึกจริง)

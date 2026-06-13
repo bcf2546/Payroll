@@ -6,7 +6,7 @@ function bindSalaryDropdowns() {
   const sel = document.getElementById('salEmployee');
   const group = document.getElementById('salGroup').value;
   const emps = state.data.employees.filter(e => e.group === group && !e.endDate);
-  emps.sort((a, b) => (a.empId || '').localeCompare(b.empId || ''));
+  emps.sort(employeeComparator());
   sel.innerHTML = '<option value="">-- เลือกพนักงาน --</option>' +
     emps.map(e => `<option value="${escapeHtml(e.empId)}">${escapeHtml(e.empId)} - ${escapeHtml(e.firstName)} ${escapeHtml(e.lastName || e.nameEn || '')}</option>`).join('');
 }

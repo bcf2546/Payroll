@@ -32,7 +32,7 @@ function loadSummaryTable() {
   if (type === 'sso' || type === 'tax') {
     // รายงานข้าม group (ทั้งบริษัท)
     const month = parseInt(document.getElementById('summaryMonth').value);
-    const allEmps = state.data.employees.slice().sort((a, b) => (a.empId || '').localeCompare(b.empId || ''));
+    const allEmps = state.data.employees.slice().sort(employeeComparator());
     wrap.innerHTML = type === 'sso'
       ? renderSSOReportHTML(year, month, allEmps)
       : renderTaxReportHTML(year, month, allEmps);
@@ -40,7 +40,7 @@ function loadSummaryTable() {
   }
   
   const allGroupEmps = state.data.employees.filter(e => e.group === group);
-  allGroupEmps.sort((a, b) => (a.empId || '').localeCompare(b.empId || ''));
+  sortEmployees(allGroupEmps);
   
   if (allGroupEmps.length === 0) {
     wrap.innerHTML = '<div style="text-align:center; padding:60px; color:#999;">ไม่พบพนักงานในกลุ่มนี้</div>';
@@ -132,7 +132,7 @@ function renderSSOReportHTML(year, month, emps) {
   html += '</div>';
   html += '</div>';
   
-  html += '<style>.summary-table td.num { border:1px solid #ddd; padding:5px 8px; text-align:right; font-family:monospace; } .summary-table tbody tr:hover { background:#e8f4f8 !important; }</style>';
+  html += '<style>.summary-table td.num { border:1px solid #ddd; padding:4px 5px; text-align:right; font-family:monospace; overflow:hidden; text-overflow:ellipsis; } .summary-table tbody tr:hover { background:#e8f4f8 !important; } .summary-table th, .summary-table thead tr { -webkit-print-color-adjust:exact; print-color-adjust:exact; }</style>';
   
   return html;
 }
@@ -587,20 +587,20 @@ function renderMonthlyThaiHTML(group, year, month, emps) {
     sso: a.sso + r.sso, ssoEmployer: a.ssoEmployer + r.ssoEmployer,
     tax: a.tax + r.tax,
     pvd: a.pvd + r.pvd, pvdEmployer: a.pvdEmployer + r.pvdEmployer,
-    cash: a.cash + r.cash, net: a.net + r.net,
+    cash: a.cash + r.cash, bank: a.bank + r.bank, net: a.net + r.net,
     transferCount: a.transferCount + (r.bank > 0 ? 1 : 0)
-  }), { salary:0, otherIncome:0, sso:0, ssoEmployer:0, tax:0, pvd:0, pvdEmployer:0, cash:0, net:0, transferCount:0 });
+  }), { salary:0, otherIncome:0, sso:0, ssoEmployer:0, tax:0, pvd:0, pvdEmployer:0, cash:0, bank:0, net:0, transferCount:0 });
   totals.transferFee = totals.transferCount * TRANSFER_FEE_PER_PERSON;
   
   let html = '<div class="summary-title" style="text-align:center; font-size:16px; font-weight:bold; margin-bottom:10px; color:#1a5276;">';
   html += 'สรุปรายการจ่ายเงินเดือน-ไทย (' + escapeHtml(group) + ') ประจำเดือน ' + MONTHS[month-1] + ' ' + year + '</div>';
   
-  html += '<table class="summary-table" style="border-collapse:collapse; font-size:12px; width:100%;">';
+  html += '<table class="summary-table" style="border-collapse:collapse; font-size:11px; width:100%; table-layout:fixed;">';
   html += '<thead><tr style="background:#2c5f8d; color:white;">';
-  const headers = ['ลำดับ', 'รายชื่อ', 'รายได้', 'รายได้อื่น', 'SSO ลจ.', 'W/H TAX', 'PVD ลจ.', 'เงินสด', 'จ่ายสุทธิ', 'PVD นจ.', 'SSO นจ.'];
-  const widths = ['50px', '160px', '90px', '90px', '80px', '90px', '80px', '80px', '100px', '80px', '80px'];
+  const headers = ['ลำดับ', 'รายชื่อ', 'รายได้', 'รายได้อื่น', 'SSO ลจ.', 'W/H TAX', 'PVD ลจ.', 'เงินสด', 'เข้าบัญชี', 'จ่ายสุทธิ', 'SSO นจ.', 'PVD นจ.'];
+  const widths = ['34px', '120px', '68px', '64px', '58px', '58px', '58px', '60px', '70px', '74px', '58px', '58px'];
   headers.forEach((h, i) => {
-    html += '<th style="border:1px solid #1a4567; padding:6px 8px; min-width:' + widths[i] + ';">' + h + '</th>';
+    html += '<th style="border:1px solid #1a4567; padding:5px 4px; width:' + widths[i] + ';">' + h + '</th>';
   });
   html += '</tr></thead><tbody>';
   
@@ -616,9 +616,10 @@ function renderMonthlyThaiHTML(group, year, month, emps) {
     html += '<td class="num">' + fmt(r.tax) + '</td>';
     html += '<td class="num">' + fmt(r.pvd) + '</td>';
     html += '<td class="num">' + fmt(r.cash) + '</td>';
+    html += '<td class="num" style="color:#2471a3;">' + fmt(r.bank) + '</td>';  // เข้าบัญชี
     html += '<td class="num" style="font-weight:bold; color:#1a5276;">' + fmt(r.net) + '</td>';
-    html += '<td class="num">' + fmt(r.pvdEmployer) + '</td>';  // PVD นจ. (จากฟิลด์นายจ้างจริง)
-    html += '<td class="num">' + fmt(r.ssoEmployer) + '</td>';  // SSO นจ. (จากฟิลด์นายจ้างจริง)
+    html += '<td class="num">' + fmt(r.ssoEmployer) + '</td>';  // SSO นจ. (สลับมาก่อน)
+    html += '<td class="num">' + fmt(r.pvdEmployer) + '</td>';  // PVD นจ.
     html += '</tr>';
   });
   
@@ -631,9 +632,10 @@ function renderMonthlyThaiHTML(group, year, month, emps) {
   html += '<td class="num">' + fmt(totals.tax) + '</td>';
   html += '<td class="num">' + fmt(totals.pvd) + '</td>';
   html += '<td class="num">' + fmt(totals.cash) + '</td>';
+  html += '<td class="num" style="color:#2471a3;">' + fmt(totals.bank) + '</td>';  // เข้าบัญชี
   html += '<td class="num" style="color:#1a5276;">' + fmt(totals.net) + '</td>';
-  html += '<td class="num">' + fmt(totals.pvdEmployer) + '</td>';
-  html += '<td class="num">' + fmt(totals.ssoEmployer) + '</td>';
+  html += '<td class="num">' + fmt(totals.ssoEmployer) + '</td>';  // SSO นจ.
+  html += '<td class="num">' + fmt(totals.pvdEmployer) + '</td>';  // PVD นจ.
   html += '</tr>';
   
   html += '</tbody></table>';
@@ -666,7 +668,7 @@ function renderMonthlyThaiHTML(group, year, month, emps) {
   html += '</div>';
   html += '</div>';
   
-  html += '<style>.summary-table td.num { border:1px solid #ddd; padding:5px 8px; text-align:right; font-family:monospace; } .summary-table tbody tr:hover { background:#e8f4f8 !important; }</style>';
+  html += '<style>.summary-table td.num { border:1px solid #ddd; padding:4px 5px; text-align:right; font-family:monospace; overflow:hidden; text-overflow:ellipsis; } .summary-table tbody tr:hover { background:#e8f4f8 !important; } .summary-table th, .summary-table thead tr { -webkit-print-color-adjust:exact; print-color-adjust:exact; }</style>';
   
   return html;
 }
@@ -784,7 +786,7 @@ function printSummaryTable() {
   const MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
   
   if (type === 'sso' || type === 'tax') {
-    emps = state.data.employees.slice().sort((a, b) => (a.empId || '').localeCompare(b.empId || ''));
+    emps = state.data.employees.slice().sort(employeeComparator());
     const month = parseInt(document.getElementById('summaryMonth').value);
     tableHtml = type === 'sso'
       ? renderSSOReportHTML(year, month, emps)
@@ -800,7 +802,7 @@ function printSummaryTable() {
     subtitle = 'ประจำเดือน ' + MONTHS[month-1] + ' ' + year;
   } else {
     const allGroupEmps = state.data.employees.filter(e => e.group === group);
-    allGroupEmps.sort((a, b) => (a.empId || '').localeCompare(b.empId || ''));
+    sortEmployees(allGroupEmps);
     if (allGroupEmps.length === 0) {
       toast('ไม่พบพนักงานในกลุ่มนี้', 'error');
       return;
@@ -823,7 +825,7 @@ function printSummaryTable() {
       tableHtml = !isMyanmar
         ? renderMonthlyThaiHTML(group, year, month, emps)
         : renderMonthlyMyanmarHTML(group, year, month, emps);
-      pageSize = 'A4 portrait';
+      pageSize = isMyanmar ? 'A4 portrait' : 'A4 landscape';
       title = isMyanmar ? 'รายการจ่ายเงินเดือน-ต่างด้าว' : 'สรุปรายการจ่ายเงินเดือน';
       subtitle = 'กลุ่ม ' + group + '  |  ประจำเดือน ' + MONTHS[month-1] + ' ' + year;
     }
@@ -891,6 +893,7 @@ function printSummaryTable() {
     
     // Print
     '@media print {' +
+    '  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }' +
     '  .toolbar { display: none !important; }' +
     '  body { padding: 0; }' +
     '  .letterhead { break-after: avoid; padding: 6px 0 8px !important; margin-bottom: 6px !important; border-bottom-width: 2px !important; }' +
@@ -974,7 +977,7 @@ function exportSummaryXlsx() {
   
   if (type === 'sso') {
     const month = parseInt(document.getElementById('summaryMonth').value);
-    const emps = state.data.employees.slice().sort((a,b) => (a.empId||'').localeCompare(b.empId||''));
+    const emps = state.data.employees.slice().sort(employeeComparator());
     csv += 'รายงานประกันสังคม (สปส. 1-10) ประจำเดือน ' + MONTHS[month-1] + ' ' + year + '\n\n';
     csv += 'ลำดับ,รหัส,เลขที่บัตรประชาชน,ชื่อ-สกุล,กลุ่ม,ค่าจ้าง,ปกส.ลูกจ้าง,ปกส.นายจ้าง,รวมส่ง\n';
     let totals = { salary:0, sso:0 };
@@ -992,7 +995,7 @@ function exportSummaryXlsx() {
     filename = 'รายงานปกส_' + MONTHS[month-1] + '_' + year + '.csv';
   } else if (type === 'tax') {
     const month = parseInt(document.getElementById('summaryMonth').value);
-    const emps = state.data.employees.slice().sort((a,b) => (a.empId||'').localeCompare(b.empId||''));
+    const emps = state.data.employees.slice().sort(employeeComparator());
     csv += 'รายงานภาษีหัก ณ ที่จ่าย (ภงด.1) ประจำเดือน ' + MONTHS[month-1] + ' ' + year + '\n\n';
     csv += 'ลำดับ,รหัส,เลขที่บัตรประชาชน,ชื่อ-สกุล,กลุ่ม,เงินเดือน,รายได้อื่น,รวมรายได้,ภาษีหัก\n';
     let totals = { salary:0, other:0, total:0, tax:0 };
@@ -1011,7 +1014,7 @@ function exportSummaryXlsx() {
     filename = 'รายงานTAX_' + MONTHS[month-1] + '_' + year + '.csv';
   } else if (type === 'yearly') {
     const emps = state.data.employees.filter(e => e.group === group && isActiveInYear(e, year));
-    emps.sort((a, b) => (a.empId || '').localeCompare(b.empId || ''));
+    sortEmployees(emps);
     if (emps.length === 0) { toast('ไม่พบพนักงานในกลุ่มนี้', 'error'); return; }
     
     csv += 'ทะเบียนการจ่ายเงินเดือน (' + group + ') บริษัท ฟาร์มไก่ดำ (กาญจนบุรี) จำกัด ประจำปี ' + year + '\n\n';
@@ -1044,7 +1047,7 @@ function exportSummaryXlsx() {
     // monthly
     const month = parseInt(document.getElementById('summaryMonth').value);
     const emps = state.data.employees.filter(e => e.group === group && isActiveForMonthView(e, year, month));
-    emps.sort((a, b) => (a.empId || '').localeCompare(b.empId || ''));
+    sortEmployees(emps);
     if (emps.length === 0) { toast('ไม่พบพนักงานในกลุ่มนี้', 'error'); return; }
     
     const isThaiStyle = !group.includes('พม่า');
@@ -1052,8 +1055,8 @@ function exportSummaryXlsx() {
     
     if (isThaiStyle) {
       csv += 'สรุปรายการจ่ายเงินเดือน-ไทย (' + group + ') ประจำเดือน ' + monthName + ' ' + year + '\n\n';
-      csv += 'ลำดับ,รายชื่อ,รายได้,รายได้อื่น,SSO ลจ.,W/H TAX,PVD ลจ.,เงินสด,จ่ายสุทธิ,PVD นจ.,SSO นจ.\n';
-      let totals = { salary:0, otherIncome:0, sso:0, ssoEmp:0, tax:0, pvd:0, pvdEmp:0, cash:0, net:0, transferCount:0 };
+      csv += 'ลำดับ,รายชื่อ,รายได้,รายได้อื่น,SSO ลจ.,W/H TAX,PVD ลจ.,เงินสด,เข้าบัญชี,จ่ายสุทธิ,SSO นจ.,PVD นจ.\n';
+      let totals = { salary:0, otherIncome:0, sso:0, ssoEmp:0, tax:0, pvd:0, pvdEmp:0, cash:0, bank:0, net:0, transferCount:0 };
       emps.forEach((emp, i) => {
         const s = state.data.salaries[salaryKey(emp.empId, year, month)] || {};
         const sal = Number(s.salary)||0, oth = Number(s.otherIncome)||0;
@@ -1065,14 +1068,14 @@ function exportSummaryXlsx() {
         const bank = typeof bankRaw === 'number' ? bankRaw : (parseFloat(String(bankRaw).replace(/,/g,'')) || 0);
         const net = sal + oth - sso - tax - pvd;
         const name = (emp.firstName || '') + ' ' + (emp.lastName || emp.nameEn || '');
-        csv += (i+1) + ',"' + name + '",' + sal + ',' + oth + ',' + sso + ',' + tax + ',' + pvd + ',' + cash + ',' + net + ',' + pvdEmp + ',' + ssoEmp + '\n';
+        csv += (i+1) + ',"' + name + '",' + sal + ',' + oth + ',' + sso + ',' + tax + ',' + pvd + ',' + cash + ',' + bank + ',' + net + ',' + ssoEmp + ',' + pvdEmp + '\n';
         totals.salary += sal; totals.otherIncome += oth;
         totals.sso += sso; totals.ssoEmp += ssoEmp;
         totals.tax += tax; totals.pvd += pvd; totals.pvdEmp += pvdEmp;
-        totals.cash += cash; totals.net += net;
+        totals.cash += cash; totals.bank += bank; totals.net += net;
         if (bank > 0) totals.transferCount++;
       });
-      csv += ',"** รวม **",' + totals.salary + ',' + totals.otherIncome + ',' + totals.sso + ',' + totals.tax + ',' + totals.pvd + ',' + totals.cash + ',' + totals.net + ',' + totals.pvdEmp + ',' + totals.ssoEmp + '\n';
+      csv += ',"** รวม **",' + totals.salary + ',' + totals.otherIncome + ',' + totals.sso + ',' + totals.tax + ',' + totals.pvd + ',' + totals.cash + ',' + totals.bank + ',' + totals.net + ',' + totals.ssoEmp + ',' + totals.pvdEmp + '\n';
       // แถวสรุปค่าธรรมเนียมโอน (บริษัทเป็นผู้ชำระ)
       csv += '\n"ค่าธรรมเนียมโอน (10 บาท/คน · บริษัทเป็นผู้ชำระ)",' + totals.transferCount + ' คน,' + (totals.transferCount * 10) + '\n';
     } else {

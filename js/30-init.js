@@ -38,10 +38,12 @@ function bindEvents() {
   document.getElementById('printSlipGroup').addEventListener('change', bindPrintDropdowns);
   document.getElementById('printWhtGroup').addEventListener('change', bindPrintDropdowns);
   
-  // Modal close on backdrop click
-  document.getElementById('empModal').addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal-backdrop')) closeEmpModal();
-  });
+  // Modal close on backdrop click (mousedown+mouseup ที่ backdrop เท่านั้น — กันลากเมาส์)
+  bindModalBackdropClose(
+    document.getElementById('empModal'),
+    closeEmpModal,
+    (target) => target.classList.contains('modal-backdrop')
+  );
   
   // Global keyboard shortcuts
   document.addEventListener('keydown', handleKeyboardShortcut);
@@ -153,7 +155,7 @@ function showKeyboardHelp() {
     modal = document.createElement('div');
     modal.id = 'kbHelpModal';
     modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:10000; display:flex; align-items:center; justify-content:center;';
-    modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+    bindModalBackdropClose(modal, () => { modal.style.display = 'none'; });
     
     const isMac = navigator.platform.toUpperCase().includes('MAC');
     const mod = isMac ? '⌘' : 'Ctrl';
