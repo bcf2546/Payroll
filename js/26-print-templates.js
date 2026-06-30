@@ -58,6 +58,7 @@ table.main tr.bonus-row td.bonus-label { text-align: center; letter-spacing: 3px
 .page.data-only table.main tr.summary-row,
 .page.data-only table.main tr.bonus-row td.bonus-label,
 .page.data-only table.main tr.bonus-row .arrow { visibility: hidden; }
+.page.data-only table.main td.month { visibility: hidden !important; }
 .page.data-only table.main th,
 .page.data-only table.main td { border-color: transparent !important; background: transparent !important; }
 .page.data-only table.main td.row-active { background: transparent !important; }
