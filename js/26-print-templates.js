@@ -97,6 +97,7 @@ function renderPage(emp, year, salaries, bonuses, config, logo, mode, selectedMo
   
   let sums = { salary:0, otherIncome:0, total:0, sso:0, tax:0, pvd:0, pvdEmployer:0, net:0 };
   for (let m = 1; m <= 12; m++) {
+    if (!activeMonths.has(m)) continue;  // รวมเฉพาะเดือนที่เลือก — กันยอดเพี้ยนตอนพิมพ์กลางปี
     const s = salaries[salaryKey(emp.empId, year, m)];
     if (s) {
       sums.salary += Number(s.salary) || 0;
@@ -111,6 +112,7 @@ function renderPage(emp, year, salaries, bonuses, config, logo, mode, selectedMo
   }
   let monthRows = '';
   for (let m = 1; m <= 12; m++) {
+    const isActive = activeMonths.has(m);
     const s = salaries[salaryKey(emp.empId, year, m)] || {};
     const salary = Number(s.salary) || 0;
     const otherIncome = Number(s.otherIncome) || 0;
@@ -120,21 +122,22 @@ function renderPage(emp, year, salaries, bonuses, config, logo, mode, selectedMo
     const pvd = Number(s.pvd) || 0;
     const pvdEmployer = Number(s.pvdEmployer) || 0;
     const net = total - sso - tax - pvd;
-    const hasData = (salary > 0 || otherIncome > 0);
     
-    const rowClass = activeMonths.has(m) ? 'row-active' : 'row-inactive';
+    const rowClass = isActive ? 'row-active' : 'row-inactive';
     const cellCls = 'num ' + rowClass;
+    // เดือนที่ไม่เลือก → เว้นว่าง ไม่แสดงตัวเลข (กันเลขเดือนที่ไม่ต้องการโผล่)
+    const f = (v) => isActive ? formatNum(v) : '';
     
     monthRows += '<tr><td class="month ' + rowClass + '">' + MONTHS[m-1] + '</td>' +
-      '<td class="' + cellCls + '">' + formatNum(salary) + '</td>' +
-      '<td class="' + cellCls + '">' + formatNum(otherIncome) + '</td>' +
-      '<td class="' + cellCls + '">' + formatNum(total) + '</td>' +
-      '<td class="' + cellCls + '">' + formatNum(sso) + '</td>' +
-      '<td class="' + cellCls + '">' + formatNum(tax) + '</td>' +
-      '<td class="' + cellCls + '">' + formatNum(pvd) + '</td>' +
-      '<td class="num net-col ' + rowClass + '">' + formatNum(net) + '</td>' +
-      '<td class="' + cellCls + '">' + formatNum(pvdEmployer) + '</td>' +
-      '<td class="' + rowClass + '">' + (s.receivedDate || '') + '</td>' +
+      '<td class="' + cellCls + '">' + f(salary) + '</td>' +
+      '<td class="' + cellCls + '">' + f(otherIncome) + '</td>' +
+      '<td class="' + cellCls + '">' + f(total) + '</td>' +
+      '<td class="' + cellCls + '">' + f(sso) + '</td>' +
+      '<td class="' + cellCls + '">' + f(tax) + '</td>' +
+      '<td class="' + cellCls + '">' + f(pvd) + '</td>' +
+      '<td class="num net-col ' + rowClass + '">' + f(net) + '</td>' +
+      '<td class="' + cellCls + '">' + f(pvdEmployer) + '</td>' +
+      '<td class="' + rowClass + '">' + (isActive ? (s.receivedDate || '') : '') + '</td>' +
       '<td class="' + rowClass + '"></td></tr>';
   }
   const bonus = bonuses[bonusKey(emp.empId, year)] || {};
