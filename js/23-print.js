@@ -94,6 +94,7 @@ function printYearly(multi) {
     selectedMonths.push(parseInt(cb.value));
   });
   const includeBonus = document.getElementById('yearlyIncludeBonus').checked;
+  const showSummary = document.getElementById('yearlyShowSummary').checked;
   const offsetX = parseFloat(document.getElementById('yearlyOffsetX').value) || 0;
   const offsetY = parseFloat(document.getElementById('yearlyOffsetY').value) || 0;
   
@@ -103,7 +104,7 @@ function printYearly(multi) {
   }
   
   emps.sort(employeeComparator());
-  openPrintWindow('yearly', { emps, year, mode, selectedMonths, includeBonus, offsetX, offsetY });
+  openPrintWindow('yearly', { emps, year, mode, selectedMonths, includeBonus, showSummary, offsetX, offsetY });
 }
 
 function printSlip(multi) {
